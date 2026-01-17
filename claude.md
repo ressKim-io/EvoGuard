@@ -129,6 +129,34 @@ docs(readme): update installation guide
 - Docker + Docker Compose
 - CUDA 12.4+
 
+## Go 개발 가이드
+
+### 핵심 원칙
+- **Clean Architecture**: domain → usecase → adapter → infrastructure
+- **Context 필수**: 모든 DB/Redis 호출에 context 전달
+- **인터페이스 의존**: domain에서 인터페이스 정의, infrastructure에서 구현
+
+### GORM 성능 설정
+```go
+gorm.Config{
+    SkipDefaultTransaction: true,  // 필수
+    PrepareStmt:            true,  // 필수
+}
+```
+
+### Redis 설정 (go-redis v9.7+)
+```go
+redis.Options{
+    Protocol:       3,      // RESP3
+    ReadBufferSize: 32768,  // 32KB
+}
+```
+
+### 주의사항
+- N+1 방지: `db.Preload()` 사용
+- Prometheus 라벨에 동적 값 금지 (카디널리티 폭발)
+- 에러는 도메인 에러로 래핑 (`fmt.Errorf("%w", err)`)
+
 ## 참고 문서
 
 상세 문서는 `.claude/docs/` 디렉토리 참조:
@@ -142,6 +170,13 @@ docs(readme): update installation guide
 - `06-API_SPEC.md` - API 명세
 - `07-DEVELOPMENT_ROADMAP.md` - 개발 로드맵
 - `08-PROJECT_STRUCTURE.md` - 프로젝트 구조
+
+### Go 가이드
+- `go-01-features.md` - Go 1.24 주요 변경사항
+- `go-02-structure.md` - 프로젝트 구조 (Clean Architecture)
+- `go-03-config-logging.md` - Viper 설정 & Zap 로깅
+- `go-04-gorm-redis.md` - GORM & go-redis Best Practices
+- `go-05-gin-prometheus.md` - Gin, Prometheus & DevOps
 
 ### Git 가이드
 - `git-01-rules.md` - Git 규칙
