@@ -157,6 +157,37 @@ redis.Options{
 - Prometheus 라벨에 동적 값 금지 (카디널리티 폭발)
 - 에러는 도메인 에러로 래핑 (`fmt.Errorf("%w", err)`)
 
+## Python ML 개발 가이드
+
+### 패키지 관리: uv
+- `pip` 대신 `uv` 사용 (10-100배 빠름)
+- `uv.lock`은 반드시 git 커밋 (재현성 보장)
+
+### 핵심 스택
+| Package | Version | 용도 |
+|---------|---------|------|
+| PyTorch | 2.5.1+cu124 | Deep Learning |
+| transformers | 4.48.3 | Pre-trained Models |
+| PEFT | 0.14.0 | LoRA/QLoRA |
+| bitsandbytes | 0.49.1 | 4-bit/8-bit 양자화 |
+| MLflow | 2.22.4 | 실험 추적 |
+
+### QLoRA 필수 설정
+```python
+BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.bfloat16,  # 필수
+    bnb_4bit_use_double_quant=True,
+)
+```
+
+### 주의사항
+- `device_map="auto"`는 **추론 전용** (학습 시 사용 금지)
+- `torch.compile()`로 2-3배 속도 향상
+- `mlflow.pytorch.autolog()`는 Lightning 전용, vanilla PyTorch는 수동 로깅
+- 4-bit 양자화 후 순수 학습 불가 → LoRA 필수
+
 ## 참고 문서
 
 상세 문서는 `.claude/docs/` 디렉토리 참조:
@@ -177,6 +208,15 @@ redis.Options{
 - `go-03-config-logging.md` - Viper 설정 & Zap 로깅
 - `go-04-gorm-redis.md` - GORM & go-redis Best Practices
 - `go-05-gin-prometheus.md` - Gin, Prometheus & DevOps
+
+### Python 가이드
+- `py-00-overview.md` - Python ML Stack 개요
+- `py-01-uv-setup.md` - uv + pyproject.toml 설정
+- `py-02-pytorch.md` - PyTorch 2.5 Best Practices
+- `py-03-transformers-peft.md` - Transformers & PEFT/LoRA
+- `py-04-quantization.md` - bitsandbytes 양자화
+- `py-05-mlflow.md` - MLflow 실험 추적
+- `py-06-patterns.md` - 공통 패턴 & 팁
 
 ### Git 가이드
 - `git-01-rules.md` - Git 규칙
