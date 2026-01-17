@@ -1,0 +1,205 @@
+# PR Test Workflow
+# Runs lint and tests on pull requests
+
+name: PR Test
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'api-service/**'
+      - 'ml-service/**'
+      - 'attacker/**'
+      - 'defender/**'
+      - 'training/**'
+      - 'mlops/**'
+      - '.github/workflows/pr-test.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GO_VERSION: '1.24'
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  # ==========================================================================
+  # Detect Changes
+  # ==========================================================================
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      go: ${{ steps.filter.outputs.go }}
+      python: ${{ steps.filter.outputs.python }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            go:
+              - 'api-service/**'
+            python:
+              - 'ml-service/**'
+              - 'attacker/**'
+              - 'defender/**'
+              - 'training/**'
+              - 'mlops/**'
+
+  # ==========================================================================
+  # Go Jobs
+  # ==========================================================================
+  go-lint:
+    needs: changes
+    if: needs.changes.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: api-service/go.sum
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: api-service
+          args: --timeout=5m
+
+  go-test:
+    needs: changes
+    if: needs.changes.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: api-service/go.sum
+
+      - name: Run tests
+        working-directory: api-service
+        run: go test -v -race -coverprofile=coverage.out ./...
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: api-service/coverage.out
+          flags: go
+          fail_ci_if_error: false
+
+  # ==========================================================================
+  # Python Jobs
+  # ==========================================================================
+  python-lint:
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        service: [ml-service, attacker, defender, training, mlops]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check if service exists
+        id: check
+        run: |
+          if [ -d "${{ matrix.service }}" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Python
+        if: steps.check.outputs.exists == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        if: steps.check.outputs.exists == 'true'
+        uses: astral-sh/setup-uv@v4
+
+      - name: Run ruff
+        if: steps.check.outputs.exists == 'true'
+        working-directory: ${{ matrix.service }}
+        run: |
+          uv pip install ruff --system
+          ruff check .
+
+  python-test:
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        service: [ml-service, attacker, defender, training, mlops]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check if service exists
+        id: check
+        run: |
+          if [ -d "${{ matrix.service }}" ] && [ -f "${{ matrix.service }}/pyproject.toml" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Python
+        if: steps.check.outputs.exists == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        if: steps.check.outputs.exists == 'true'
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        if: steps.check.outputs.exists == 'true'
+        working-directory: ${{ matrix.service }}
+        run: uv sync
+
+      - name: Run pytest
+        if: steps.check.outputs.exists == 'true'
+        working-directory: ${{ matrix.service }}
+        run: uv run pytest -v --cov=. --cov-report=xml
+
+      - name: Upload coverage
+        if: steps.check.outputs.exists == 'true'
+        uses: codecov/codecov-action@v4
+        with:
+          files: ${{ matrix.service }}/coverage.xml
+          flags: python-${{ matrix.service }}
+          fail_ci_if_error: false
+
+  # ==========================================================================
+  # Build Check
+  # ==========================================================================
+  build-check:
+    needs: [go-lint, go-test, python-lint, python-test]
+    if: always() && !cancelled()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check job results
+        run: |
+          if [ "${{ needs.go-lint.result }}" == "failure" ] || \
+             [ "${{ needs.go-test.result }}" == "failure" ] || \
+             [ "${{ needs.python-lint.result }}" == "failure" ] || \
+             [ "${{ needs.python-test.result }}" == "failure" ]; then
+            echo "One or more jobs failed"
+            exit 1
+          fi
+          echo "All checks passed!"

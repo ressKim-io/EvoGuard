@@ -1,0 +1,113 @@
+name: 🐛 Bug Report
+description: 버그를 발견하셨나요? 알려주세요!
+title: "[Bug]: "
+labels: ["bug", "triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        버그 리포트를 작성해주셔서 감사합니다!
+        가능한 자세히 작성해주시면 빠른 해결에 도움이 됩니다.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 버그 설명
+      description: 발생한 버그에 대해 명확하게 설명해주세요.
+      placeholder: 어떤 문제가 발생했나요?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 재현 방법
+      description: 버그를 재현하는 단계를 알려주세요.
+      placeholder: |
+        1. '...'로 이동
+        2. '...'를 클릭
+        3. '...'까지 스크롤
+        4. 에러 발생
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 예상 동작
+      description: 어떻게 동작해야 한다고 생각하시나요?
+      placeholder: 정상적으로는 어떻게 동작해야 하나요?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 실제 동작
+      description: 실제로는 어떻게 동작했나요?
+      placeholder: 실제로 발생한 동작을 설명해주세요.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: 컴포넌트
+      description: 어떤 컴포넌트에서 문제가 발생했나요?
+      options:
+        - API Service (Go)
+        - ML Service (Python)
+        - Attacker Module
+        - Defender Module
+        - Training Pipeline
+        - MLOps
+        - Infrastructure
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 환경 정보
+      description: 관련 환경 정보를 알려주세요.
+      placeholder: |
+        - OS: [예: macOS 14.0, Ubuntu 22.04]
+        - Go Version: [예: 1.24]
+        - Python Version: [예: 3.12]
+        - Docker Version: [예: 24.0]
+      render: markdown
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 로그/에러 메시지
+      description: 관련 로그나 에러 메시지가 있다면 붙여넣어주세요.
+      placeholder: 에러 로그를 여기에 붙여넣으세요
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 스크린샷
+      description: 해당되는 경우 스크린샷을 추가해주세요.
+      placeholder: 이미지를 드래그하거나 붙여넣기 하세요
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 체크리스트
+      description: 제출 전 확인해주세요
+      options:
+        - label: 비슷한 이슈가 이미 있는지 검색했습니다.
+          required: true
+        - label: 최신 버전에서도 동일한 문제가 발생합니다.
+          required: false

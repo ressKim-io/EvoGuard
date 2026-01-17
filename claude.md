@@ -99,6 +99,11 @@ docs(readme): update installation guide
 - 민감정보 커밋 금지 (`.env`, credentials)
 - 500줄+ 대규모 커밋 금지
 
+### Claude 작업 규칙
+- **Phase 완료 시 자동 커밋**: 각 Phase 작업 완료 후 반드시 커밋
+- 커밋 메시지: `chore(setup): complete phase N - <description>`
+- 체크리스트 업데이트 포함
+
 ## 개발 컨벤션
 
 ### Go (api-service/)
@@ -199,6 +204,7 @@ BitsAndBytesConfig(
 상세 문서는 `.claude/docs/` 디렉토리 참조:
 
 ### 프로젝트 문서
+- `00-PROJECT_CHECKLIST.md` - 프로젝트 준비 체크리스트
 - `01-ARCHITECTURE.md` - 시스템 아키텍처
 - `02-TECH_STACK.md` - 기술 스택 상세
 - `03-ENVIRONMENT_SETUP.md` - 환경 설정 가이드
@@ -207,6 +213,7 @@ BitsAndBytesConfig(
 - `06-API_SPEC.md` - API 명세
 - `07-DEVELOPMENT_ROADMAP.md` - 개발 로드맵
 - `08-PROJECT_STRUCTURE.md` - 프로젝트 구조
+- `09-CI_CD.md` - CI/CD 파이프라인
 
 ### Go 가이드
 - `go-01-features.md` - Go 1.24 주요 변경사항
@@ -223,6 +230,12 @@ BitsAndBytesConfig(
 - `py-04-quantization.md` - bitsandbytes 양자화
 - `py-05-mlflow.md` - MLflow 실험 추적
 - `py-06-patterns.md` - 공통 패턴 & 팁
+
+### 개발 환경 가이드
+- `dev-01-makefile.md` - Makefile 사용법
+- `dev-02-environment.md` - 환경 변수 관리
+- `dev-03-code-quality.md` - 코드 품질 도구 (lint, format)
+- `dev-04-templates.md` - PR/Issue 템플릿 가이드
 
 ### Git 가이드
 - `git-01-rules.md` - Git 규칙
