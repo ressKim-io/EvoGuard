@@ -1,0 +1,162 @@
+# =============================================================================
+# EvoGuard Python Configuration
+# =============================================================================
+# This is the root pyproject.toml for shared Python tool configurations.
+# Each service (ml-service, attacker, etc.) may have its own pyproject.toml
+# for dependencies, but tools like ruff will inherit from this root config.
+# =============================================================================
+
+[project]
+name = "evoguard"
+version = "0.1.0"
+description = "Adversarial Learning based Content Moderation System"
+requires-python = ">=3.12"
+
+# =============================================================================
+# Ruff - Linter & Formatter
+# =============================================================================
+# Docs: https://docs.astral.sh/ruff/configuration/
+
+[tool.ruff]
+# Target Python version (matches requires-python)
+target-version = "py312"
+
+# Line length (same as Black)
+line-length = 88
+
+# Exclude common directories
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    "build",
+    "dist",
+    "*.egg-info",
+    "node_modules",
+    "migrations",
+]
+
+[tool.ruff.lint]
+# Enable rules
+select = [
+    "F",      # Pyflakes - errors, undefined names, unused imports
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "I",      # isort - import sorting
+    "UP",     # pyupgrade - Python version upgrades
+    "B",      # flake8-bugbear - common bug patterns
+    "C4",     # flake8-comprehensions - better comprehensions
+    "SIM",    # flake8-simplify - simplifications
+    "PTH",    # flake8-use-pathlib - prefer pathlib
+    "RUF",    # Ruff-specific rules
+]
+
+# Ignore specific rules
+ignore = [
+    "E501",   # Line too long (formatter handles this)
+    "E731",   # Lambda assignment (sometimes useful)
+    "B008",   # Function call in default argument (FastAPI Depends)
+    "B905",   # zip without strict= (Python 3.10+)
+]
+
+# Allow autofix for all enabled rules
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.per-file-ignores]
+# Tests can have longer lines, magic values, assertions
+"**/tests/**/*.py" = ["E501", "PLR2004", "S101"]
+"**/test_*.py" = ["E501", "PLR2004", "S101"]
+
+[tool.ruff.lint.isort]
+# isort configuration
+known-first-party = ["app", "core", "models", "utils"]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+
+[tool.ruff.format]
+# Format configuration
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "lf"
+
+# =============================================================================
+# mypy - Type Checker
+# =============================================================================
+# Docs: https://mypy.readthedocs.io/en/stable/config_file.html
+
+[tool.mypy]
+python_version = "3.12"
+
+# Strict mode (can be relaxed initially)
+strict = false
+
+# Gradually enable strict checks
+check_untyped_defs = true
+disallow_untyped_decorators = true
+warn_return_any = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+
+# Ignore missing imports for third-party libraries
+ignore_missing_imports = true
+
+# Show error codes
+show_error_codes = true
+
+# Exclude directories
+exclude = [
+    "venv",
+    ".venv",
+    "build",
+    "dist",
+]
+
+# =============================================================================
+# pytest - Testing
+# =============================================================================
+# Docs: https://docs.pytest.org/en/stable/reference/customize.html
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+]
+markers = [
+    "slow: marks tests as slow",
+    "integration: marks tests as integration tests",
+    "gpu: marks tests that require GPU",
+]
+
+# =============================================================================
+# coverage - Test Coverage
+# =============================================================================
+# Docs: https://coverage.readthedocs.io/en/latest/config.html
+
+[tool.coverage.run]
+branch = true
+source = ["."]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "*/.venv/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+show_missing = true

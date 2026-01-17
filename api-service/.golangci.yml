@@ -1,0 +1,192 @@
+# =============================================================================
+# golangci-lint Configuration
+# =============================================================================
+# Docs: https://golangci-lint.run/docs/configuration/
+# Run: golangci-lint run ./...
+# =============================================================================
+
+run:
+  # Timeout for analysis
+  timeout: 5m
+
+  # Include test files
+  tests: true
+
+  # Number of CPUs to use
+  concurrency: 4
+
+  # Exit code when issues found
+  issues-exit-code: 1
+
+  # Modules download mode
+  modules-download-mode: readonly
+
+# =============================================================================
+# Linters
+# =============================================================================
+
+linters:
+  # Disable all linters first, then enable specific ones
+  disable-all: true
+
+  enable:
+    # Default linters
+    - errcheck      # Check for unchecked errors
+    - gosimple      # Simplify code
+    - govet         # Report suspicious constructs
+    - ineffassign   # Detect ineffective assignments
+    - staticcheck   # Static analysis
+    - unused        # Check for unused code
+
+    # Additional linters
+    - bodyclose     # Check HTTP response body is closed
+    - contextcheck  # Check context usage
+    - errname       # Check error naming conventions
+    - gocognit      # Cognitive complexity
+    - goconst       # Find repeated strings that could be constants
+    - gocritic      # Opinionated linter
+    - gofmt         # Check formatting
+    - goimports     # Check imports
+    - gosec         # Security checker
+    - misspell      # Spell checker
+    - prealloc      # Slice preallocation
+    - revive        # Fast, extensible linter
+    - unconvert     # Unnecessary type conversions
+    - unparam       # Unused function parameters
+    - whitespace    # Whitespace issues
+
+# =============================================================================
+# Linter Settings
+# =============================================================================
+
+linters-settings:
+  errcheck:
+    # Check type assertions
+    check-type-assertions: true
+    # Check blank identifier assignments
+    check-blank: true
+
+  gocognit:
+    # Minimal cognitive complexity to report
+    min-complexity: 20
+
+  goconst:
+    # Minimal length of string constant
+    min-len: 3
+    # Minimum occurrences before suggesting const
+    min-occurrences: 3
+
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+      - performance
+    disabled-checks:
+      - hugeParam  # Can be noisy
+
+  gofmt:
+    # Simplify code
+    simplify: true
+
+  goimports:
+    # Put local imports after 3rd-party
+    local-prefixes: github.com/your-org/evoguard
+
+  gosec:
+    # Exclude generated files
+    excludes:
+      - G104  # Audit errors not checked (use errcheck)
+      - G304  # File path provided as taint input (often intentional)
+
+  misspell:
+    locale: US
+
+  revive:
+    # Confidence for issues
+    confidence: 0.8
+    rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: dot-imports
+      - name: error-return
+      - name: error-strings
+      - name: error-naming
+      - name: exported
+      - name: if-return
+      - name: increment-decrement
+      - name: var-naming
+      - name: var-declaration
+      - name: package-comments
+      - name: range
+      - name: receiver-naming
+      - name: time-naming
+      - name: unexported-return
+      - name: indent-error-flow
+      - name: errorf
+      - name: empty-block
+      - name: superfluous-else
+      - name: unused-parameter
+      - name: unreachable-code
+      - name: redefines-builtin-id
+
+  unparam:
+    # Check exported functions
+    check-exported: false
+
+# =============================================================================
+# Issues Configuration
+# =============================================================================
+
+issues:
+  # Maximum issues per linter (0 = unlimited)
+  max-issues-per-linter: 50
+
+  # Maximum issues with same text (0 = unlimited)
+  max-same-issues: 10
+
+  # Show only new issues (useful for legacy projects)
+  new: false
+
+  # Exclude some linters from test files
+  exclude-rules:
+    # Test files can be more relaxed
+    - path: "_test\\.go$"
+      linters:
+        - gocyclo
+        - gocognit
+        - errcheck
+        - gosec
+        - goconst
+
+    # Example files can have magic numbers
+    - path: "example_"
+      linters:
+        - goconst
+
+    # Main files often have simple error handling
+    - path: "main\\.go$"
+      linters:
+        - gocyclo
+
+  # Include issues from default excluded patterns
+  include:
+    - EXC0012  # Exported should have comment
+    - EXC0014  # Comment on exported should be of form
+
+# =============================================================================
+# Output Configuration
+# =============================================================================
+
+output:
+  # Output format (golangci-lint v1.x compatible)
+  format: colored-line-number
+
+  # Print lines of code with issue
+  print-issued-lines: true
+
+  # Print linter name
+  print-linter-name: true
+
+  # Sort results by file, line, column
+  sort-results: true

@@ -7,18 +7,24 @@ echo "=== Git Pre-commit Hook ==="
 PROJECT_ROOT="$(git rev-parse --show-toplevel)"
 FAILED=0
 
-# Go checks (if api-service exists)
+# Go checks (if api-service exists and has Go files)
 if [ -d "$PROJECT_ROOT/api-service" ]; then
-    echo "[Go] Running golangci-lint..."
     cd "$PROJECT_ROOT/api-service"
-    if command -v golangci-lint &> /dev/null; then
-        golangci-lint run ./... || FAILED=1
-    else
-        echo "[Go] golangci-lint not installed, skipping..."
-    fi
 
-    echo "[Go] Running tests..."
-    go test ./... -v || FAILED=1
+    # Check if there are any Go files
+    if ls *.go 1> /dev/null 2>&1 || find . -name "*.go" -type f | grep -q .; then
+        echo "[Go] Running golangci-lint..."
+        if command -v golangci-lint &> /dev/null; then
+            golangci-lint run ./... || FAILED=1
+        else
+            echo "[Go] golangci-lint not installed, skipping..."
+        fi
+
+        echo "[Go] Running tests..."
+        go test ./... -v || FAILED=1
+    else
+        echo "[Go] No Go files found, skipping..."
+    fi
 fi
 
 # Python checks (if ml-service exists)
