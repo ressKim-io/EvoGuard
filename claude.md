@@ -87,6 +87,12 @@ fix(api): resolve null pointer exception
 docs(readme): update installation guide
 ```
 
+### 커밋 주기 (Atomic Commits)
+- **작고 빈번한 커밋**: 하나의 커밋 = 하나의 논리적 변경
+- **권장 단위**: 50-200줄, 1-5개 파일
+- **커밋 시점**: 함수 완성, 버그 수정, 테스트 통과 시
+- **금지**: 미완성 코드, 500줄+ 대규모 커밋
+
 ### 금지 사항
 - main 직접 커밋/force push 금지
 - 의미없는 메시지 금지 (`fix`, `update` 등)

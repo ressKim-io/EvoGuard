@@ -92,7 +92,48 @@ feat(api)!: change response format
 BREAKING CHANGE: API uses camelCase now
 ```
 
-## 4. 워크플로우
+## 4. 커밋 주기 (Atomic Commits)
+
+### 원칙: Commit Early, Commit Often
+- **작고 빈번한 커밋**이 크고 드문 커밋보다 좋음
+- 하나의 커밋 = 하나의 논리적 변경 (Atomic Commit)
+- 완성된 단위만 커밋 (반쯤 완성된 코드 X)
+
+### 언제 커밋하는가?
+| 상황 | 커밋 여부 |
+|------|----------|
+| 함수/메서드 하나 완성 | ✅ 커밋 |
+| 버그 하나 수정 | ✅ 커밋 |
+| 테스트 통과 | ✅ 커밋 |
+| 리팩토링 한 단계 완료 | ✅ 커밋 |
+| 퇴근 전 (미완성) | ❌ 커밋 금지 |
+| 여러 기능 한꺼번에 | ❌ 분리해서 커밋 |
+
+### Atomic Commit 예시
+```bash
+# ❌ Bad: 너무 큰 커밋
+git commit -m "feat(auth): add login feature"
+# → 500줄, 10개 파일 변경
+
+# ✅ Good: 작은 단위로 분리
+git commit -m "feat(auth): add login form component"
+git commit -m "feat(auth): add form validation"
+git commit -m "feat(auth): add API integration"
+git commit -m "test(auth): add login tests"
+```
+
+### 권장 커밋 단위
+- **50-200줄** 변경 권장
+- **1-5개 파일** 변경 권장
+- **500줄+** 대규모 커밋 금지
+
+### 이점
+- 코드 리뷰 효율 향상
+- 롤백 용이
+- `git bisect`로 버그 추적 가능
+- 변경 이력 추적 명확
+
+## 5. 워크플로우
 
 ### 일일 작업
 ```bash
@@ -102,9 +143,12 @@ git checkout main && git pull
 # 2. 브랜치 생성
 git checkout -b feature/JIRA-123-login
 
-# 3. 작업 + 커밋 (자주, 작게)
-git add .
-git commit -m "feat(auth): add login form"
+# 3. 작업 + 커밋 (작은 단위로 자주)
+git add src/components/LoginForm.tsx
+git commit -m "feat(auth): add login form component"
+
+git add src/utils/validation.ts
+git commit -m "feat(auth): add form validation"
 
 # 4. 푸시 + PR
 git push -u origin feature/JIRA-123-login
@@ -129,7 +173,7 @@ git push origin --delete feature/JIRA-123-login
 git fetch --prune
 ```
 
-## 5. 금지 사항 ❌
+## 6. 금지 사항 ❌
 ```bash
 # ❌ main 직접 커밋
 git checkout main && git commit
@@ -148,7 +192,7 @@ git add .env
 git commit -m "feat: add everything"
 ```
 
-## 6. 올바른 방법 ✅
+## 7. 올바른 방법 ✅
 ```bash
 # ✅ 브랜치에서 작업
 git checkout -b feature/JIRA-123-add-feature
@@ -164,7 +208,7 @@ git commit -m "fix(auth): resolve token expiration"
 git push -f origin feature/JIRA-123-my-branch
 ```
 
-## 7. PR 템플릿 (.github/PULL_REQUEST_TEMPLATE.md)
+## 8. PR 템플릿 (.github/PULL_REQUEST_TEMPLATE.md)
 ```markdown
 ## Summary
 <!-- 변경 내용 -->
@@ -181,7 +225,7 @@ Closes #
 - [ ] lint/format 통과
 ```
 
-## 8. 코드 리뷰 코멘트
+## 9. 코드 리뷰 코멘트
 ```
 🔴 [MUST] 필수 수정 - 보안 이슈
 🟡 [SHOULD] 권장 - 함수 분리 제안
@@ -190,7 +234,7 @@ Closes #
 👍 [NICE] 칭찬
 ```
 
-## 9. Claude 실수 기록
+## 10. Claude 실수 기록
 <!-- 틀릴 때마다 추가 -->
 - 커밋 메시지에서 scope 생략
 - 브랜치명 티켓 번호 형식 불일치
