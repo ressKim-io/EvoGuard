@@ -57,6 +57,15 @@ content-arena/
 
 상세: `.claude/docs/git-01-rules.md`
 
+### 작업 완료 워크플로우
+작업 완료 시 반드시 아래 순서를 따를 것:
+1. 브랜치 생성 (`git checkout -b {type}/{description}`)
+2. 커밋 및 푸시
+3. PR 생성 (`gh pr create`)
+4. CI 체크 통과 확인
+5. PR 머지 (`gh pr merge`)
+6. main 브랜치로 전환 및 pull (`git checkout main && git pull`)
+
 ## 개발 컨벤션
 
 | 언어 | 파일명 | 클래스/구조체 | 함수/변수 | 테스트 |
