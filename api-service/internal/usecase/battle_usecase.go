@@ -9,6 +9,7 @@ import (
 	"github.com/ressKim-io/EvoGuard/api-service/internal/domain/repository"
 )
 
+// Error definitions for battle usecase
 var (
 	ErrBattleNotFound = errors.New("battle not found")
 	ErrInvalidRequest = errors.New("invalid request")
@@ -37,11 +38,11 @@ type BattleOutput struct {
 
 // BattleListOutput represents paginated battle list
 type BattleListOutput struct {
-	Battles    []*BattleOutput `json:"battles"`
-	Total      int64           `json:"total"`
-	Limit      int             `json:"limit"`
-	Offset     int             `json:"offset"`
-	HasMore    bool            `json:"has_more"`
+	Battles []*BattleOutput `json:"battles"`
+	Total   int64           `json:"total"`
+	Limit   int             `json:"limit"`
+	Offset  int             `json:"offset"`
+	HasMore bool            `json:"has_more"`
 }
 
 // BattleUsecase defines the interface for battle business logic

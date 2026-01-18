@@ -46,13 +46,11 @@ func Setup(db *gorm.DB, redisClient *redis.Client, logger *zap.Logger) *gin.Engi
 	{
 		// Battle routes
 		battles := v1.Group("/battles")
-		{
-			battles.POST("", battleHandler.CreateBattle)
-			battles.GET("", battleHandler.ListBattles)
-			battles.GET("/:id", battleHandler.GetBattle)
-			battles.GET("/:id/stats", battleHandler.GetBattleStats)
-			battles.POST("/:id/stop", battleHandler.StopBattle)
-		}
+		battles.POST("", battleHandler.CreateBattle)
+		battles.GET("", battleHandler.ListBattles)
+		battles.GET("/:id", battleHandler.GetBattle)
+		battles.GET("/:id/stats", battleHandler.GetBattleStats)
+		battles.POST("/:id/stop", battleHandler.StopBattle)
 	}
 
 	return router

@@ -43,11 +43,12 @@ func Logger(logger *zap.Logger) gin.HandlerFunc {
 			zap.String("client_ip", c.ClientIP()),
 		}
 
-		if status >= 500 {
+		switch {
+		case status >= 500:
 			logger.Error("request completed", fields...)
-		} else if status >= 400 {
+		case status >= 400:
 			logger.Warn("request completed", fields...)
-		} else {
+		default:
 			logger.Info("request completed", fields...)
 		}
 	}

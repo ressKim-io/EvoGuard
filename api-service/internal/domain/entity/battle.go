@@ -9,6 +9,7 @@ import (
 // BattleStatus represents the current state of a battle
 type BattleStatus string
 
+// BattleStatus constants
 const (
 	BattleStatusPending   BattleStatus = "pending"
 	BattleStatusRunning   BattleStatus = "running"
@@ -19,6 +20,7 @@ const (
 // AttackStrategy represents the attack strategy type
 type AttackStrategy string
 
+// AttackStrategy constants
 const (
 	AttackStrategyUnicodeEvasion AttackStrategy = "unicode_evasion"
 	AttackStrategyHomoglyph      AttackStrategy = "homoglyph"

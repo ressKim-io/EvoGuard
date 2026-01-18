@@ -38,7 +38,7 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("failed to initialize logger: %w", err)
 	}
-	defer func() { _ = log.Sync() }()
+	defer func() { _ = log.Sync() }() //nolint:errcheck
 
 	// Set Gin mode
 	gin.SetMode(cfg.Server.Mode)
