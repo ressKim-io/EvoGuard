@@ -94,7 +94,10 @@ func (c *MLClient) Classify(ctx context.Context, text, requestID string) (*Class
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		respBody, _ := io.ReadAll(resp.Body)
+		respBody, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("ML service returned status %d", resp.StatusCode)
+		}
 		return nil, fmt.Errorf("ML service returned status %d: %s", resp.StatusCode, string(respBody))
 	}
 
@@ -131,7 +134,10 @@ func (c *MLClient) ClassifyBatch(ctx context.Context, texts []string, requestID 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		respBody, _ := io.ReadAll(resp.Body)
+		respBody, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("ML service returned status %d", resp.StatusCode)
+		}
 		return nil, fmt.Errorf("ML service returned status %d: %s", resp.StatusCode, string(respBody))
 	}
 

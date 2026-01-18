@@ -12,6 +12,8 @@ import (
 	"github.com/ressKim-io/EvoGuard/api-service/internal/adapter/client"
 )
 
+const statusNotConfigured = "not configured"
+
 // HealthHandler handles health check endpoints
 type HealthHandler struct {
 	db       *gorm.DB
@@ -55,7 +57,7 @@ func (h *HealthHandler) Health(c *gin.Context) {
 			components["database"] = "ok"
 		}
 	} else {
-		components["database"] = "not configured"
+		components["database"] = statusNotConfigured
 	}
 
 	// Check Redis
@@ -67,7 +69,7 @@ func (h *HealthHandler) Health(c *gin.Context) {
 			components["redis"] = "ok"
 		}
 	} else {
-		components["redis"] = "not configured"
+		components["redis"] = statusNotConfigured
 	}
 
 	// Check ML Service
@@ -79,7 +81,7 @@ func (h *HealthHandler) Health(c *gin.Context) {
 			components["ml-service"] = resp.Status + " (model: " + resp.ModelVersion + ")"
 		}
 	} else {
-		components["ml-service"] = "not configured"
+		components["ml-service"] = statusNotConfigured
 	}
 
 	status := "healthy"

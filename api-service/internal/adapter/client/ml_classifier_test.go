@@ -44,7 +44,7 @@ func TestMLClassifier_Classify(t *testing.T) {
 	})
 
 	t.Run("non-toxic text returns inverted score", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			resp := ClassifyResponse{
 				Success: true,
 				Result: ClassificationResult{
@@ -72,7 +72,7 @@ func TestMLClassifier_Classify(t *testing.T) {
 	})
 
 	t.Run("server error returns error", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte("internal error"))
 		}))
@@ -120,7 +120,7 @@ func TestMLClassifier_ClassifyBatch(t *testing.T) {
 	})
 
 	t.Run("batch classification error", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 		}))
 		defer server.Close()
