@@ -1,10 +1,8 @@
-# 📐 01. 상세 아키텍처
+# 시스템 아키텍처
 
-> Content Arena 시스템의 전체 아키텍처 및 컴포넌트 설계
+> Content Arena 시스템 아키텍처 개요
 
----
-
-## 🏗️ 전체 시스템 아키텍처
+## 전체 시스템 아키텍처
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -81,9 +79,7 @@
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
----
-
-## 🔄 핵심 플로우
+## 핵심 플로우
 
 ### 1. Battle Flow (배틀 실행 플로우)
 
@@ -198,332 +194,46 @@
         │                  │                    │                     │
 ```
 
----
+## 컴포넌트 책임
 
-## 🧩 컴포넌트 상세
+| 컴포넌트 | 기술 | 책임 | 상세 문서 |
+|----------|------|------|-----------|
+| **API Gateway** | Go/Gin | HTTP 라우팅, 요청 검증, 미들웨어 | `06-API_SPEC.md` |
+| **Battle Service** | Go | 배틀 라이프사이클, 결과 집계, 이벤트 발행 | `go-02-structure.md` |
+| **Attacker Service** | Python/Ollama | 우회 전략 생성, LLM 변형 | `04-ML_PIPELINE.md` |
+| **Defender Service** | Python/FastAPI | 콘텐츠 분류 추론, 모델 서빙 | `04-ML_PIPELINE.md` |
+| **Training Service** | Python | QLoRA Fine-tuning, MLflow 추적 | `05-MLOPS.md` |
 
-### 1. API Gateway (Go/Gin)
 
-```go
-// 주요 엔드포인트
-POST   /api/v1/battles              // 새 배틀 생성
-GET    /api/v1/battles/:id          // 배틀 상태 조회
-GET    /api/v1/battles/:id/rounds   // 라운드 결과 목록
-POST   /api/v1/battles/:id/stop     // 배틀 중지
 
-GET    /api/v1/models               // 모델 목록
-GET    /api/v1/models/:alias        // 특정 모델 정보 (champion/challenger)
-POST   /api/v1/models/promote       // Challenger → Champion 승격
+## 데이터 모델
 
-GET    /api/v1/metrics              // Prometheus 메트릭
-GET    /api/v1/metrics/quality      // 품질 추이 데이터
+### PostgreSQL 테이블
 
-GET    /health                      // 헬스 체크
-GET    /ready                       // 레디니스 체크
-```
-
-**책임:**
-- HTTP 요청 라우팅
-- 요청 검증 및 변환
-- 응답 직렬화
-- 미들웨어 (인증, 로깅, 메트릭)
-
-### 2. Battle Service (Go)
-
-```go
-// 핵심 로직
-type BattleService struct {
-    repo       BattleRepository
-    attacker   AttackerClient
-    defender   DefenderClient
-    eventBus   EventBus
-}
-
-func (s *BattleService) RunBattle(config BattleConfig) (*Battle, error) {
-    battle := s.repo.Create(config)
-    
-    for round := 1; round <= config.Rounds; round++ {
-        // 1. 공격자: 우회 패턴 생성
-        evasion := s.attacker.GenerateEvasion(config.Strategy, round)
-        
-        // 2. 방어자: 탐지 시도
-        result := s.defender.Classify(evasion.Text)
-        
-        // 3. 결과 기록
-        s.repo.RecordRound(battle.ID, round, evasion, result)
-        
-        // 4. 메트릭 업데이트
-        s.updateMetrics(battle.ID, result)
-    }
-    
-    // 5. 배틀 완료 이벤트 발행
-    s.eventBus.Publish("battle_completed", battle)
-    
-    return battle, nil
-}
-```
-
-**책임:**
-- 배틀 라이프사이클 관리
-- 라운드별 결과 집계
-- 트리거 조건 평가
-- 이벤트 발행
-
-### 3. Attacker Service (Python/Ollama)
-
-```python
-# 공격 전략 인터페이스
-class AttackStrategy(ABC):
-    @abstractmethod
-    def generate(self, original: str) -> str:
-        pass
-
-# 전략 구현체들
-class UnicodeEvasionStrategy(AttackStrategy):
-    """유니코드 문자 변형 전략"""
-    def generate(self, original: str) -> str:
-        # ㅅㅂ → ㅅ ㅂ, ㅆㅣ발 → ㅆ ㅣ 발 등
-        pass
-
-class LLMEvasionStrategy(AttackStrategy):
-    """LLM을 이용한 창의적 우회"""
-    def __init__(self, ollama_client):
-        self.llm = ollama_client
-    
-    def generate(self, original: str) -> str:
-        prompt = f"""
-        다음 문장의 의미는 유지하면서 
-        욕설 필터를 우회할 수 있는 변형을 생성하세요:
-        원본: {original}
-        """
-        return self.llm.generate(prompt)
-
-class HomoglyphStrategy(AttackStrategy):
-    """동형 문자(homoglyph) 치환"""
-    pass
-
-class InsertionStrategy(AttackStrategy):
-    """보이지 않는 문자 삽입"""
-    pass
-```
-
-**책임:**
-- 다양한 우회 전략 제공
-- LLM 기반 창의적 변형
-- 공격 패턴 다양화
-
-### 4. Defender Service (Python/FastAPI)
-
-```python
-# 추론 서비스
-class DefenderService:
-    def __init__(self, model_path: str):
-        self.tokenizer = AutoTokenizer.from_pretrained(model_path)
-        self.model = AutoModelForSequenceClassification.from_pretrained(model_path)
-    
-    def classify(self, text: str) -> ClassificationResult:
-        inputs = self.tokenizer(text, return_tensors="pt", truncation=True)
-        outputs = self.model(**inputs)
-        probs = torch.softmax(outputs.logits, dim=-1)
-        
-        return ClassificationResult(
-            toxic_score=probs[0][1].item(),
-            is_toxic=probs[0][1].item() > 0.5,
-            confidence=max(probs[0]).item()
-        )
-    
-    def reload_model(self, new_model_path: str):
-        """Champion 모델 교체 시 호출"""
-        self.model = AutoModelForSequenceClassification.from_pretrained(new_model_path)
-```
-
-**책임:**
-- 콘텐츠 분류 추론
-- 모델 로딩/언로딩
-- 배치 추론 지원
-
-### 5. Training Service (Python)
-
-```python
-# QLoRA Fine-tuning 파이프라인
-class TrainingPipeline:
-    def __init__(self, config: TrainingConfig):
-        self.config = config
-        self.mlflow_client = mlflow.tracking.MlflowClient()
-    
-    def train(self, dataset_path: str) -> str:
-        with mlflow.start_run():
-            # 1. 데이터 로드
-            dataset = load_dataset("json", data_files=dataset_path)
-            
-            # 2. 모델 & 토크나이저 로드 (4-bit 양자화)
-            model = AutoModelForSequenceClassification.from_pretrained(
-                self.config.base_model,
-                load_in_4bit=True,
-                torch_dtype=torch.bfloat16
-            )
-            
-            # 3. LoRA 설정
-            peft_config = LoraConfig(
-                r=16,
-                lora_alpha=32,
-                target_modules=["q_proj", "v_proj"],
-                lora_dropout=0.05,
-                task_type="SEQ_CLS"
-            )
-            model = get_peft_model(model, peft_config)
-            
-            # 4. 학습
-            trainer = Trainer(
-                model=model,
-                args=self.config.training_args,
-                train_dataset=dataset["train"],
-                eval_dataset=dataset["validation"]
-            )
-            trainer.train()
-            
-            # 5. 평가 & 로깅
-            metrics = trainer.evaluate()
-            mlflow.log_metrics(metrics)
-            
-            # 6. 모델 저장 & 등록
-            model_path = f"models/challenger-{mlflow.active_run().info.run_id}"
-            trainer.save_model(model_path)
-            
-            mlflow.register_model(
-                f"runs:/{mlflow.active_run().info.run_id}/model",
-                "content-filter",
-                tags={"alias": "challenger"}
-            )
-            
-            return model_path
-```
-
-**책임:**
-- QLoRA Fine-tuning 실행
-- MLflow 실험 추적
-- 모델 체크포인트 저장
-- Challenger 모델 등록
-
----
-
-## 📊 데이터 모델
-
-### PostgreSQL 스키마
-
-```sql
--- 배틀 테이블
-CREATE TABLE battles (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    status          VARCHAR(20) NOT NULL DEFAULT 'pending',  -- pending, running, completed, failed
-    config          JSONB NOT NULL,                          -- 배틀 설정
-    total_rounds    INTEGER NOT NULL,
-    completed_rounds INTEGER DEFAULT 0,
-    evasion_count   INTEGER DEFAULT 0,                       -- 우회 성공 횟수
-    detection_count INTEGER DEFAULT 0,                       -- 탐지 성공 횟수
-    created_at      TIMESTAMP DEFAULT NOW(),
-    updated_at      TIMESTAMP DEFAULT NOW()
-);
-
--- 라운드 결과 테이블
-CREATE TABLE battle_rounds (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    battle_id       UUID REFERENCES battles(id),
-    round_number    INTEGER NOT NULL,
-    original_text   TEXT NOT NULL,                           -- 원본 텍스트
-    evasion_text    TEXT NOT NULL,                           -- 변형된 텍스트
-    attack_strategy VARCHAR(50) NOT NULL,                    -- 사용된 전략
-    toxic_score     FLOAT NOT NULL,                          -- 탐지 점수
-    is_detected     BOOLEAN NOT NULL,                        -- 탐지 여부
-    model_version   VARCHAR(100),                            -- 사용된 모델 버전
-    created_at      TIMESTAMP DEFAULT NOW(),
-    
-    UNIQUE(battle_id, round_number)
-);
-
--- 모델 메타데이터 테이블 (MLflow 보조)
-CREATE TABLE model_metadata (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    mlflow_run_id   VARCHAR(100) NOT NULL,
-    model_alias     VARCHAR(50) NOT NULL,                    -- champion, challenger
-    version         INTEGER NOT NULL,
-    f1_score        FLOAT,
-    precision_score FLOAT,
-    recall_score    FLOAT,
-    training_samples INTEGER,
-    created_at      TIMESTAMP DEFAULT NOW()
-);
-
--- 학습 데이터 테이블
-CREATE TABLE training_data (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    text            TEXT NOT NULL,
-    label           INTEGER NOT NULL,                        -- 0: clean, 1: toxic
-    source          VARCHAR(50),                             -- jigsaw, battle, manual
-    battle_id       UUID REFERENCES battles(id),
-    created_at      TIMESTAMP DEFAULT NOW()
-);
-
--- 인덱스
-CREATE INDEX idx_battle_rounds_battle_id ON battle_rounds(battle_id);
-CREATE INDEX idx_training_data_label ON training_data(label);
-CREATE INDEX idx_model_metadata_alias ON model_metadata(model_alias);
-```
+| 테이블 | 설명 | 주요 컬럼 |
+|--------|------|-----------|
+| `battles` | 배틀 상태 | id, status, config, evasion_count, detection_count |
+| `battle_rounds` | 라운드 결과 | battle_id, round_number, evasion_text, toxic_score |
+| `model_metadata` | 모델 정보 | mlflow_run_id, model_alias, f1_score |
+| `training_data` | 학습 데이터 | text, label, source |
 
 ### Redis 키 구조
 
-```
-# 배틀 상태 캐시
-battle:{battle_id}:status     → "running"
-battle:{battle_id}:progress   → {"completed": 50, "total": 100}
+| 패턴 | 용도 |
+|------|------|
+| `battle:{id}:status` | 배틀 상태 캐시 |
+| `metrics:detection_rate:*` | 메트릭 캐시 |
+| `model:champion:*` | 모델 정보 캐시 |
+| `queue:retrain_trigger` | 재학습 이벤트 큐 |
+| `lock:training` | 분산 락 |
 
-# 메트릭 캐시
-metrics:detection_rate:current → 0.85
-metrics:detection_rate:history → [0.60, 0.65, 0.72, 0.80, 0.85]
+## 보안 & 확장성
 
-# 모델 정보 캐시
-model:champion:path           → "/models/champion-v3"
-model:champion:f1             → 0.87
+**보안**: `dev-06-security.md` 참조
+- API Rate Limiting, Input Validation
+- 모델/데이터 접근 제어
 
-# 이벤트 큐
-queue:retrain_trigger         → [battle_id1, battle_id2, ...]
-
-# 분산 락 (재학습 중복 방지)
-lock:training                 → "worker-1" (with TTL)
-```
-
----
-
-## 🔐 보안 고려사항
-
-### 1. API 보안
-- Rate Limiting (IP 기반, 토큰 기반)
-- Input Validation (텍스트 길이, 인코딩)
-- CORS 설정
-
-### 2. ML 모델 보안
-- 모델 파일 접근 제한
-- Inference API 인증
-- 악성 입력 필터링
-
-### 3. 데이터 보안
-- 민감 데이터 마스킹
-- 학습 데이터 익명화
-- 로그 레벨 관리
-
----
-
-## 📈 확장성 고려사항
-
-### 수평 확장
-- API Gateway: Stateless, 로드밸런서 뒤에 배치
-- Inference Service: 복제본 증가로 처리량 확장
-- Training Service: 단일 인스턴스 (GPU 제약)
-
-### 수직 확장
-- 더 큰 GPU로 Fine-tuning 속도 향상
-- 더 큰 모델 (13B+) 지원
-
-### 캐싱 전략
-- 자주 요청되는 분류 결과 캐싱
-- 모델 추론 결과 TTL 적용
+**확장성**:
+- 수평: API Gateway, Inference Service (Stateless)
+- 수직: GPU 업그레이드로 학습 속도 향상
+- 캐싱: 분류 결과 TTL 적용
