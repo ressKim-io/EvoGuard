@@ -36,8 +36,11 @@ func Setup(db *gorm.DB, redisClient *redis.Client, mlClient *client.MLClient, lo
 	battleRepo := postgres.NewBattleRepository(db)
 	roundRepo := postgres.NewRoundRepository(db)
 
+	// Initialize classifier
+	classifier := client.NewMLClassifier(mlClient)
+
 	// Initialize usecases
-	battleUC := usecase.NewBattleUsecase(battleRepo, roundRepo)
+	battleUC := usecase.NewBattleUsecase(battleRepo, roundRepo, classifier)
 
 	// Initialize handlers
 	battleHandler := handler.NewBattleHandler(battleUC)
@@ -52,6 +55,8 @@ func Setup(db *gorm.DB, redisClient *redis.Client, mlClient *client.MLClient, lo
 		battles.GET("/:id", battleHandler.GetBattle)
 		battles.GET("/:id/stats", battleHandler.GetBattleStats)
 		battles.POST("/:id/stop", battleHandler.StopBattle)
+		battles.POST("/:id/rounds", battleHandler.SubmitRound)
+		battles.GET("/:id/rounds", battleHandler.GetRounds)
 	}
 
 	return router

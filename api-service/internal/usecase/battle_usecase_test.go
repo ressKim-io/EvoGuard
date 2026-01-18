@@ -96,7 +96,7 @@ func TestBattleUsecase_Create(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		mockBattleRepo := new(MockBattleRepository)
 		mockRoundRepo := new(MockRoundRepository)
-		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo)
+		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo, nil)
 
 		mockBattleRepo.On("Create", mock.Anything, mock.AnythingOfType("*entity.Battle")).Return(nil)
 
@@ -121,7 +121,7 @@ func TestBattleUsecase_Create(t *testing.T) {
 	t.Run("success with default defender alias", func(t *testing.T) {
 		mockBattleRepo := new(MockBattleRepository)
 		mockRoundRepo := new(MockRoundRepository)
-		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo)
+		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo, nil)
 
 		mockBattleRepo.On("Create", mock.Anything, mock.AnythingOfType("*entity.Battle")).Return(nil)
 
@@ -140,7 +140,7 @@ func TestBattleUsecase_Create(t *testing.T) {
 	t.Run("repository error", func(t *testing.T) {
 		mockBattleRepo := new(MockBattleRepository)
 		mockRoundRepo := new(MockRoundRepository)
-		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo)
+		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo, nil)
 
 		expectedErr := errors.New("database error")
 		mockBattleRepo.On("Create", mock.Anything, mock.AnythingOfType("*entity.Battle")).Return(expectedErr)
@@ -162,7 +162,7 @@ func TestBattleUsecase_GetByID(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		mockBattleRepo := new(MockBattleRepository)
 		mockRoundRepo := new(MockRoundRepository)
-		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo)
+		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo, nil)
 
 		battleID := uuid.New()
 		battle := &entity.Battle{
@@ -191,7 +191,7 @@ func TestBattleUsecase_GetByID(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		mockBattleRepo := new(MockBattleRepository)
 		mockRoundRepo := new(MockRoundRepository)
-		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo)
+		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo, nil)
 
 		battleID := uuid.New()
 		mockBattleRepo.On("GetByID", mock.Anything, battleID).Return(nil, nil)
@@ -206,7 +206,7 @@ func TestBattleUsecase_GetByID(t *testing.T) {
 	t.Run("repository error", func(t *testing.T) {
 		mockBattleRepo := new(MockBattleRepository)
 		mockRoundRepo := new(MockRoundRepository)
-		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo)
+		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo, nil)
 
 		battleID := uuid.New()
 		expectedErr := errors.New("database error")
@@ -224,7 +224,7 @@ func TestBattleUsecase_List(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		mockBattleRepo := new(MockBattleRepository)
 		mockRoundRepo := new(MockRoundRepository)
-		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo)
+		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo, nil)
 
 		battles := []*entity.Battle{
 			{ID: uuid.New(), Status: entity.BattleStatusCompleted, TotalRounds: 100},
@@ -247,7 +247,7 @@ func TestBattleUsecase_List(t *testing.T) {
 	t.Run("with pagination - has more", func(t *testing.T) {
 		mockBattleRepo := new(MockBattleRepository)
 		mockRoundRepo := new(MockRoundRepository)
-		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo)
+		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo, nil)
 
 		battles := []*entity.Battle{
 			{ID: uuid.New(), Status: entity.BattleStatusCompleted},
@@ -264,7 +264,7 @@ func TestBattleUsecase_List(t *testing.T) {
 	t.Run("default limit when zero", func(t *testing.T) {
 		mockBattleRepo := new(MockBattleRepository)
 		mockRoundRepo := new(MockRoundRepository)
-		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo)
+		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo, nil)
 
 		mockBattleRepo.On("List", mock.Anything, 20, 0).Return([]*entity.Battle{}, int64(0), nil)
 
@@ -277,7 +277,7 @@ func TestBattleUsecase_List(t *testing.T) {
 	t.Run("cap limit at 100", func(t *testing.T) {
 		mockBattleRepo := new(MockBattleRepository)
 		mockRoundRepo := new(MockRoundRepository)
-		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo)
+		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo, nil)
 
 		mockBattleRepo.On("List", mock.Anything, 100, 0).Return([]*entity.Battle{}, int64(0), nil)
 
@@ -290,7 +290,7 @@ func TestBattleUsecase_List(t *testing.T) {
 	t.Run("repository error", func(t *testing.T) {
 		mockBattleRepo := new(MockBattleRepository)
 		mockRoundRepo := new(MockRoundRepository)
-		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo)
+		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo, nil)
 
 		expectedErr := errors.New("database error")
 		mockBattleRepo.On("List", mock.Anything, 20, 0).Return(nil, int64(0), expectedErr)
@@ -306,7 +306,7 @@ func TestBattleUsecase_Stop(t *testing.T) {
 	t.Run("success - running battle", func(t *testing.T) {
 		mockBattleRepo := new(MockBattleRepository)
 		mockRoundRepo := new(MockRoundRepository)
-		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo)
+		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo, nil)
 
 		battleID := uuid.New()
 		battle := &entity.Battle{
@@ -326,7 +326,7 @@ func TestBattleUsecase_Stop(t *testing.T) {
 	t.Run("already completed", func(t *testing.T) {
 		mockBattleRepo := new(MockBattleRepository)
 		mockRoundRepo := new(MockRoundRepository)
-		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo)
+		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo, nil)
 
 		battleID := uuid.New()
 		battle := &entity.Battle{
@@ -347,7 +347,7 @@ func TestBattleUsecase_Stop(t *testing.T) {
 	t.Run("already failed", func(t *testing.T) {
 		mockBattleRepo := new(MockBattleRepository)
 		mockRoundRepo := new(MockRoundRepository)
-		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo)
+		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo, nil)
 
 		battleID := uuid.New()
 		battle := &entity.Battle{
@@ -366,7 +366,7 @@ func TestBattleUsecase_Stop(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		mockBattleRepo := new(MockBattleRepository)
 		mockRoundRepo := new(MockRoundRepository)
-		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo)
+		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo, nil)
 
 		battleID := uuid.New()
 		mockBattleRepo.On("GetByID", mock.Anything, battleID).Return(nil, nil)
@@ -381,7 +381,7 @@ func TestBattleUsecase_Stop(t *testing.T) {
 	t.Run("update error", func(t *testing.T) {
 		mockBattleRepo := new(MockBattleRepository)
 		mockRoundRepo := new(MockRoundRepository)
-		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo)
+		uc := NewBattleUsecase(mockBattleRepo, mockRoundRepo, nil)
 
 		battleID := uuid.New()
 		battle := &entity.Battle{

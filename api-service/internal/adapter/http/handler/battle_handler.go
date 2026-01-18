@@ -145,3 +145,73 @@ func (h *BattleHandler) GetBattleStats(c *gin.Context) {
 
 	respondSuccess(c, http.StatusOK, stats)
 }
+
+// SubmitRound handles POST /api/v1/battles/:id/rounds
+func (h *BattleHandler) SubmitRound(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "INVALID_REQUEST", "invalid battle id")
+		return
+	}
+
+	var input usecase.SubmitRoundInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		respondError(c, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+
+	output, err := h.battleUC.SubmitRound(c.Request.Context(), id, &input)
+	if err != nil {
+		switch err {
+		case usecase.ErrBattleNotFound:
+			respondError(c, http.StatusNotFound, "NOT_FOUND", "battle not found")
+		case usecase.ErrBattleNotRunnable:
+			respondError(c, http.StatusConflict, "CONFLICT", "battle cannot accept rounds")
+		case usecase.ErrBattleCompleted:
+			respondError(c, http.StatusConflict, "CONFLICT", "battle already completed")
+		default:
+			respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		}
+		return
+	}
+
+	respondSuccess(c, http.StatusCreated, output)
+}
+
+// GetRounds handles GET /api/v1/battles/:id/rounds
+func (h *BattleHandler) GetRounds(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		respondError(c, http.StatusBadRequest, "INVALID_REQUEST", "invalid battle id")
+		return
+	}
+
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	if err != nil {
+		limit = 20
+	}
+	offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if err != nil {
+		offset = 0
+	}
+
+	rounds, total, err := h.battleUC.GetRounds(c.Request.Context(), id, limit, offset)
+	if err != nil {
+		if err == usecase.ErrBattleNotFound {
+			respondError(c, http.StatusNotFound, "NOT_FOUND", "battle not found")
+			return
+		}
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		return
+	}
+
+	respondSuccess(c, http.StatusOK, map[string]interface{}{
+		"rounds":   rounds,
+		"total":    total,
+		"limit":    limit,
+		"offset":   offset,
+		"has_more": int64(offset+limit) < total,
+	})
+}

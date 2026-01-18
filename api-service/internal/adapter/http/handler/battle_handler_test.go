@@ -53,6 +53,22 @@ func (m *MockBattleUsecase) Stop(ctx context.Context, id uuid.UUID) (*usecase.Ba
 	return args.Get(0).(*usecase.BattleOutput), args.Error(1)
 }
 
+func (m *MockBattleUsecase) SubmitRound(ctx context.Context, battleID uuid.UUID, input *usecase.SubmitRoundInput) (*usecase.RoundOutput, error) {
+	args := m.Called(ctx, battleID, input)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*usecase.RoundOutput), args.Error(1)
+}
+
+func (m *MockBattleUsecase) GetRounds(ctx context.Context, battleID uuid.UUID, limit, offset int) ([]*usecase.RoundOutput, int64, error) {
+	args := m.Called(ctx, battleID, limit, offset)
+	if args.Get(0) == nil {
+		return nil, 0, args.Error(2)
+	}
+	return args.Get(0).([]*usecase.RoundOutput), args.Get(1).(int64), args.Error(2)
+}
+
 func setupTestRouter(h *BattleHandler) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
@@ -61,6 +77,8 @@ func setupTestRouter(h *BattleHandler) *gin.Engine {
 	r.GET("/api/v1/battles/:id", h.GetBattle)
 	r.GET("/api/v1/battles/:id/stats", h.GetBattleStats)
 	r.POST("/api/v1/battles/:id/stop", h.StopBattle)
+	r.POST("/api/v1/battles/:id/rounds", h.SubmitRound)
+	r.GET("/api/v1/battles/:id/rounds", h.GetRounds)
 	return r
 }
 
@@ -347,4 +365,131 @@ func TestGetBattleStats_Success(t *testing.T) {
 	assert.Equal(t, float64(100), data["total_rounds"])
 	assert.Equal(t, float64(75), data["completed_rounds"])
 	mockUC.AssertExpectations(t)
+}
+
+func TestSubmitRound_Success(t *testing.T) {
+	mockUC := new(MockBattleUsecase)
+	handler := NewBattleHandler(mockUC)
+	router := setupTestRouter(handler)
+
+	battleID := uuid.New()
+	roundID := uuid.New()
+	expectedOutput := &usecase.RoundOutput{
+		RoundID:        roundID,
+		BattleID:       battleID,
+		RoundNumber:    1,
+		OriginalText:   "test toxic text",
+		EvasionText:    "t3st t0xic t3xt",
+		AttackStrategy: "leetspeak",
+		ToxicScore:     0.85,
+		Confidence:     0.92,
+		IsDetected:     true,
+		LatencyMs:      45,
+	}
+
+	mockUC.On("SubmitRound", mock.Anything, battleID, mock.MatchedBy(func(input *usecase.SubmitRoundInput) bool {
+		return input.OriginalText == "test toxic text" && input.EvasionText == "t3st t0xic t3xt"
+	})).Return(expectedOutput, nil)
+
+	body := `{"original_text": "test toxic text", "evasion_text": "t3st t0xic t3xt", "attack_strategy": "leetspeak"}`
+	req, _ := http.NewRequest("POST", "/api/v1/battles/"+battleID.String()+"/rounds", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	var response Response
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.True(t, response.Success)
+	mockUC.AssertExpectations(t)
+}
+
+func TestSubmitRound_BattleNotFound(t *testing.T) {
+	mockUC := new(MockBattleUsecase)
+	handler := NewBattleHandler(mockUC)
+	router := setupTestRouter(handler)
+
+	battleID := uuid.New()
+	mockUC.On("SubmitRound", mock.Anything, battleID, mock.Anything).Return(nil, usecase.ErrBattleNotFound)
+
+	body := `{"original_text": "test", "evasion_text": "t3st", "attack_strategy": "leetspeak"}`
+	req, _ := http.NewRequest("POST", "/api/v1/battles/"+battleID.String()+"/rounds", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestSubmitRound_BattleCompleted(t *testing.T) {
+	mockUC := new(MockBattleUsecase)
+	handler := NewBattleHandler(mockUC)
+	router := setupTestRouter(handler)
+
+	battleID := uuid.New()
+	mockUC.On("SubmitRound", mock.Anything, battleID, mock.Anything).Return(nil, usecase.ErrBattleCompleted)
+
+	body := `{"original_text": "test", "evasion_text": "t3st", "attack_strategy": "leetspeak"}`
+	req, _ := http.NewRequest("POST", "/api/v1/battles/"+battleID.String()+"/rounds", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusConflict, w.Code)
+}
+
+func TestGetRounds_Success(t *testing.T) {
+	mockUC := new(MockBattleUsecase)
+	handler := NewBattleHandler(mockUC)
+	router := setupTestRouter(handler)
+
+	battleID := uuid.New()
+	rounds := []*usecase.RoundOutput{
+		{
+			RoundID:        uuid.New(),
+			BattleID:       battleID,
+			RoundNumber:    1,
+			OriginalText:   "text1",
+			EvasionText:    "t3xt1",
+			AttackStrategy: "leetspeak",
+			ToxicScore:     0.8,
+			Confidence:     0.9,
+			IsDetected:     true,
+			LatencyMs:      30,
+		},
+	}
+
+	mockUC.On("GetRounds", mock.Anything, battleID, 20, 0).Return(rounds, int64(1), nil)
+
+	req, _ := http.NewRequest("GET", "/api/v1/battles/"+battleID.String()+"/rounds", http.NoBody)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response Response
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.True(t, response.Success)
+	mockUC.AssertExpectations(t)
+}
+
+func TestGetRounds_BattleNotFound(t *testing.T) {
+	mockUC := new(MockBattleUsecase)
+	handler := NewBattleHandler(mockUC)
+	router := setupTestRouter(handler)
+
+	battleID := uuid.New()
+	mockUC.On("GetRounds", mock.Anything, battleID, 20, 0).Return(nil, int64(0), usecase.ErrBattleNotFound)
+
+	req, _ := http.NewRequest("GET", "/api/v1/battles/"+battleID.String()+"/rounds", http.NoBody)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
 }
