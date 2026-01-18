@@ -187,3 +187,4 @@ temp/
 .tmp/
 *.bak
 *.backup
+coverage.out

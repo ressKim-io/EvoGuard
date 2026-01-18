@@ -158,7 +158,7 @@ func TestGetBattle_Success(t *testing.T) {
 
 	mockUC.On("GetByID", mock.Anything, battleID).Return(expectedOutput, nil)
 
-	req, _ := http.NewRequest("GET", "/api/v1/battles/"+battleID.String(), nil)
+	req, _ := http.NewRequest("GET", "/api/v1/battles/"+battleID.String(), http.NoBody)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -179,7 +179,7 @@ func TestGetBattle_NotFound(t *testing.T) {
 	battleID := uuid.New()
 	mockUC.On("GetByID", mock.Anything, battleID).Return(nil, usecase.ErrBattleNotFound)
 
-	req, _ := http.NewRequest("GET", "/api/v1/battles/"+battleID.String(), nil)
+	req, _ := http.NewRequest("GET", "/api/v1/battles/"+battleID.String(), http.NoBody)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -197,7 +197,7 @@ func TestGetBattle_InvalidID(t *testing.T) {
 	handler := NewBattleHandler(mockUC)
 	router := setupTestRouter(handler)
 
-	req, _ := http.NewRequest("GET", "/api/v1/battles/invalid-uuid", nil)
+	req, _ := http.NewRequest("GET", "/api/v1/battles/invalid-uuid", http.NoBody)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -232,7 +232,7 @@ func TestListBattles_Success(t *testing.T) {
 
 	mockUC.On("List", mock.Anything, 20, 0).Return(expectedOutput, nil)
 
-	req, _ := http.NewRequest("GET", "/api/v1/battles", nil)
+	req, _ := http.NewRequest("GET", "/api/v1/battles", http.NoBody)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -260,7 +260,7 @@ func TestListBattles_WithPagination(t *testing.T) {
 
 	mockUC.On("List", mock.Anything, 10, 20).Return(expectedOutput, nil)
 
-	req, _ := http.NewRequest("GET", "/api/v1/battles?limit=10&offset=20", nil)
+	req, _ := http.NewRequest("GET", "/api/v1/battles?limit=10&offset=20", http.NoBody)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -285,7 +285,7 @@ func TestStopBattle_Success(t *testing.T) {
 
 	mockUC.On("Stop", mock.Anything, battleID).Return(expectedOutput, nil)
 
-	req, _ := http.NewRequest("POST", "/api/v1/battles/"+battleID.String()+"/stop", nil)
+	req, _ := http.NewRequest("POST", "/api/v1/battles/"+battleID.String()+"/stop", http.NoBody)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -306,7 +306,7 @@ func TestStopBattle_NotFound(t *testing.T) {
 	battleID := uuid.New()
 	mockUC.On("Stop", mock.Anything, battleID).Return(nil, usecase.ErrBattleNotFound)
 
-	req, _ := http.NewRequest("POST", "/api/v1/battles/"+battleID.String()+"/stop", nil)
+	req, _ := http.NewRequest("POST", "/api/v1/battles/"+battleID.String()+"/stop", http.NoBody)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -332,7 +332,7 @@ func TestGetBattleStats_Success(t *testing.T) {
 
 	mockUC.On("GetByID", mock.Anything, battleID).Return(expectedOutput, nil)
 
-	req, _ := http.NewRequest("GET", "/api/v1/battles/"+battleID.String()+"/stats", nil)
+	req, _ := http.NewRequest("GET", "/api/v1/battles/"+battleID.String()+"/stats", http.NoBody)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 

@@ -22,7 +22,7 @@ func TestRespondSuccess(t *testing.T) {
 			respondSuccess(c, http.StatusOK, map[string]string{"key": "value"})
 		})
 
-		req, _ := http.NewRequest("GET", "/test", nil)
+		req, _ := http.NewRequest("GET", "/test", http.NoBody)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
@@ -44,7 +44,7 @@ func TestRespondSuccess(t *testing.T) {
 			respondSuccess(c, http.StatusCreated, map[string]int{"id": 1})
 		})
 
-		req, _ := http.NewRequest("POST", "/test", nil)
+		req, _ := http.NewRequest("POST", "/test", http.NoBody)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
@@ -65,7 +65,7 @@ func TestRespondError(t *testing.T) {
 			respondError(c, http.StatusBadRequest, "INVALID_REQUEST", "invalid input")
 		})
 
-		req, _ := http.NewRequest("GET", "/test", nil)
+		req, _ := http.NewRequest("GET", "/test", http.NoBody)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
@@ -87,7 +87,7 @@ func TestRespondError(t *testing.T) {
 			respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "something went wrong")
 		})
 
-		req, _ := http.NewRequest("GET", "/test", nil)
+		req, _ := http.NewRequest("GET", "/test", http.NoBody)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
@@ -106,7 +106,7 @@ func TestRespondError(t *testing.T) {
 			respondError(c, http.StatusNotFound, "NOT_FOUND", "resource not found")
 		})
 
-		req, _ := http.NewRequest("GET", "/test", nil)
+		req, _ := http.NewRequest("GET", "/test", http.NoBody)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
@@ -126,7 +126,7 @@ func TestNewMeta(t *testing.T) {
 			c.JSON(http.StatusOK, meta)
 		})
 
-		req, _ := http.NewRequest("GET", "/test", nil)
+		req, _ := http.NewRequest("GET", "/test", http.NoBody)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
@@ -144,7 +144,7 @@ func TestNewMeta(t *testing.T) {
 			c.JSON(http.StatusOK, meta)
 		})
 
-		req, _ := http.NewRequest("GET", "/test", nil)
+		req, _ := http.NewRequest("GET", "/test", http.NoBody)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 

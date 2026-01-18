@@ -20,20 +20,25 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
-		fmt.Printf("Failed to load config: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to load config: %w", err)
 	}
 
 	// Initialize logger
 	log, err := logger.NewLogger(&cfg.Log)
 	if err != nil {
-		fmt.Printf("Failed to initialize logger: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to initialize logger: %w", err)
 	}
-	defer log.Sync()
+	defer func() { _ = log.Sync() }()
 
 	// Set Gin mode
 	gin.SetMode(cfg.Server.Mode)
@@ -42,14 +47,14 @@ func main() {
 	db, err := database.NewPostgresDB(&cfg.Database)
 	if err != nil {
 		log.Error("Failed to connect to database", zap.Error(err))
-		os.Exit(1)
+		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 	log.Info("Connected to database")
 
 	// Run migrations
 	if err := database.AutoMigrate(db); err != nil {
 		log.Error("Failed to run migrations", zap.Error(err))
-		os.Exit(1)
+		return fmt.Errorf("failed to run migrations: %w", err)
 	}
 	log.Info("Database migrations completed")
 
@@ -99,15 +104,15 @@ func main() {
 	}
 
 	// Close database connection
-	sqlDB, _ := db.DB()
-	if sqlDB != nil {
-		sqlDB.Close()
+	if sqlDB, err := db.DB(); err == nil && sqlDB != nil {
+		_ = sqlDB.Close()
 	}
 
 	// Close Redis connection
 	if redisClient != nil {
-		redisClient.Close()
+		_ = redisClient.Close()
 	}
 
 	log.Info("Server exited")
+	return nil
 }

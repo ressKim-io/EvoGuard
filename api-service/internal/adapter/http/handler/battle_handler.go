@@ -75,8 +75,14 @@ func (h *BattleHandler) GetBattle(c *gin.Context) {
 
 // ListBattles handles GET /api/v1/battles
 func (h *BattleHandler) ListBattles(c *gin.Context) {
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
-	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	if err != nil {
+		limit = 20
+	}
+	offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if err != nil {
+		offset = 0
+	}
 
 	output, err := h.battleUC.List(c.Request.Context(), limit, offset)
 	if err != nil {

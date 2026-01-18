@@ -23,7 +23,7 @@ func TestRequestID(t *testing.T) {
 			c.String(http.StatusOK, requestID)
 		})
 
-		req, _ := http.NewRequest("GET", "/test", nil)
+		req, _ := http.NewRequest("GET", "/test", http.NoBody)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
@@ -40,7 +40,7 @@ func TestRequestID(t *testing.T) {
 			c.String(http.StatusOK, requestID)
 		})
 
-		req, _ := http.NewRequest("GET", "/test", nil)
+		req, _ := http.NewRequest("GET", "/test", http.NoBody)
 		req.Header.Set("X-Request-ID", "custom-request-id-123")
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
@@ -62,7 +62,7 @@ func TestLogger(t *testing.T) {
 			c.String(http.StatusOK, "ok")
 		})
 
-		req, _ := http.NewRequest("GET", "/test", nil)
+		req, _ := http.NewRequest("GET", "/test", http.NoBody)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
@@ -77,7 +77,7 @@ func TestLogger(t *testing.T) {
 			c.String(http.StatusBadRequest, "bad request")
 		})
 
-		req, _ := http.NewRequest("GET", "/test", nil)
+		req, _ := http.NewRequest("GET", "/test", http.NoBody)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
@@ -92,7 +92,7 @@ func TestLogger(t *testing.T) {
 			c.String(http.StatusInternalServerError, "internal error")
 		})
 
-		req, _ := http.NewRequest("GET", "/test", nil)
+		req, _ := http.NewRequest("GET", "/test", http.NoBody)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
@@ -111,7 +111,7 @@ func TestRecovery(t *testing.T) {
 			panic("test panic")
 		})
 
-		req, _ := http.NewRequest("GET", "/test", nil)
+		req, _ := http.NewRequest("GET", "/test", http.NoBody)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
@@ -127,7 +127,7 @@ func TestRecovery(t *testing.T) {
 			c.String(http.StatusOK, "ok")
 		})
 
-		req, _ := http.NewRequest("GET", "/test", nil)
+		req, _ := http.NewRequest("GET", "/test", http.NoBody)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
@@ -143,7 +143,7 @@ func TestCORS(t *testing.T) {
 			c.String(http.StatusOK, "ok")
 		})
 
-		req, _ := http.NewRequest("GET", "/test", nil)
+		req, _ := http.NewRequest("GET", "/test", http.NoBody)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
@@ -160,7 +160,7 @@ func TestCORS(t *testing.T) {
 			c.String(http.StatusOK, "ok")
 		})
 
-		req, _ := http.NewRequest("OPTIONS", "/test", nil)
+		req, _ := http.NewRequest("OPTIONS", "/test", http.NoBody)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
