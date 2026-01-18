@@ -56,6 +56,73 @@ services:
       - evoguard-network
 
   # ===========================================================================
+  # API Service (Go)
+  # ===========================================================================
+  api-service:
+    build:
+      context: ../api-service
+      dockerfile: Dockerfile
+    container_name: evoguard-api
+    environment:
+      - EVOGUARD_SERVER_HOST=0.0.0.0
+      - EVOGUARD_SERVER_PORT=8080
+      - EVOGUARD_SERVER_MODE=release
+      - EVOGUARD_DATABASE_HOST=postgres
+      - EVOGUARD_DATABASE_PORT=5432
+      - EVOGUARD_DATABASE_USER=${DB_USER:-postgres}
+      - EVOGUARD_DATABASE_PASSWORD=${DB_PASSWORD:-postgres}
+      - EVOGUARD_DATABASE_DBNAME=${DB_NAME:-evoguard}
+      - EVOGUARD_DATABASE_SSLMODE=disable
+      - EVOGUARD_REDIS_HOST=redis
+      - EVOGUARD_REDIS_PORT=6379
+      - EVOGUARD_REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - EVOGUARD_MLSERVICE_URL=http://ml-service:8000
+      - EVOGUARD_MLSERVICE_TIMEOUT=30
+      - EVOGUARD_LOG_LEVEL=info
+      - EVOGUARD_LOG_FORMAT=json
+    ports:
+      - "${API_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ml-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - evoguard-network
+
+  # ===========================================================================
+  # ML Service (Python FastAPI)
+  # ===========================================================================
+  ml-service:
+    build:
+      context: ../ml-service
+      dockerfile: Dockerfile
+    container_name: evoguard-ml
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - MODEL_PATH=/app/models
+      - LOG_LEVEL=info
+    ports:
+      - "${ML_PORT:-8000}:8000"
+    volumes:
+      - ../models/defender:/app/models:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - evoguard-network
+
+  # ===========================================================================
   # MinIO - S3-Compatible Object Storage (for MLflow artifacts)
   # ===========================================================================
   minio:
