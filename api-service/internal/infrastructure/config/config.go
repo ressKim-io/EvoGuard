@@ -8,10 +8,11 @@ import (
 
 // Config holds all configuration for the application
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	Database DatabaseConfig `mapstructure:"database"`
-	Redis    RedisConfig    `mapstructure:"redis"`
-	Log      LogConfig      `mapstructure:"log"`
+	Server    ServerConfig    `mapstructure:"server"`
+	Database  DatabaseConfig  `mapstructure:"database"`
+	Redis     RedisConfig     `mapstructure:"redis"`
+	Log       LogConfig       `mapstructure:"log"`
+	MLService MLServiceConfig `mapstructure:"mlservice"`
 }
 
 // ServerConfig holds server configuration
@@ -43,6 +44,12 @@ type RedisConfig struct {
 type LogConfig struct {
 	Level  string `mapstructure:"level"`
 	Format string `mapstructure:"format"` // json, console
+}
+
+// MLServiceConfig holds ML service configuration
+type MLServiceConfig struct {
+	URL     string `mapstructure:"url"`
+	Timeout int    `mapstructure:"timeout"` // in seconds
 }
 
 // Load loads configuration from file and environment variables
@@ -100,4 +107,8 @@ func setDefaults() {
 	// Log defaults
 	viper.SetDefault("log.level", "info")
 	viper.SetDefault("log.format", "json")
+
+	// ML Service defaults
+	viper.SetDefault("mlservice.url", "http://localhost:8000")
+	viper.SetDefault("mlservice.timeout", 30)
 }

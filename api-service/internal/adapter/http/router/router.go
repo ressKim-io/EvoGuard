@@ -7,6 +7,7 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 
+	"github.com/ressKim-io/EvoGuard/api-service/internal/adapter/client"
 	"github.com/ressKim-io/EvoGuard/api-service/internal/adapter/http/handler"
 	"github.com/ressKim-io/EvoGuard/api-service/internal/adapter/http/middleware"
 	"github.com/ressKim-io/EvoGuard/api-service/internal/adapter/repository/postgres"
@@ -14,7 +15,7 @@ import (
 )
 
 // Setup creates and configures the Gin router
-func Setup(db *gorm.DB, redisClient *redis.Client, logger *zap.Logger) *gin.Engine {
+func Setup(db *gorm.DB, redisClient *redis.Client, mlClient *client.MLClient, logger *zap.Logger) *gin.Engine {
 	router := gin.New()
 
 	// Middleware
@@ -24,7 +25,7 @@ func Setup(db *gorm.DB, redisClient *redis.Client, logger *zap.Logger) *gin.Engi
 	router.Use(middleware.CORS())
 
 	// Health endpoints
-	healthHandler := handler.NewHealthHandler(db, redisClient)
+	healthHandler := handler.NewHealthHandler(db, redisClient, mlClient)
 	router.GET("/health", healthHandler.Health)
 	router.GET("/ready", healthHandler.Ready)
 
@@ -35,8 +36,11 @@ func Setup(db *gorm.DB, redisClient *redis.Client, logger *zap.Logger) *gin.Engi
 	battleRepo := postgres.NewBattleRepository(db)
 	roundRepo := postgres.NewRoundRepository(db)
 
+	// Initialize classifier
+	classifier := client.NewMLClassifier(mlClient)
+
 	// Initialize usecases
-	battleUC := usecase.NewBattleUsecase(battleRepo, roundRepo)
+	battleUC := usecase.NewBattleUsecase(battleRepo, roundRepo, classifier)
 
 	// Initialize handlers
 	battleHandler := handler.NewBattleHandler(battleUC)
@@ -51,6 +55,8 @@ func Setup(db *gorm.DB, redisClient *redis.Client, logger *zap.Logger) *gin.Engi
 		battles.GET("/:id", battleHandler.GetBattle)
 		battles.GET("/:id/stats", battleHandler.GetBattleStats)
 		battles.POST("/:id/stop", battleHandler.StopBattle)
+		battles.POST("/:id/rounds", battleHandler.SubmitRound)
+		battles.GET("/:id/rounds", battleHandler.GetRounds)
 	}
 
 	return router
