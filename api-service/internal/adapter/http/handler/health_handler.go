@@ -8,19 +8,23 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
+
+	"github.com/ressKim-io/EvoGuard/api-service/internal/adapter/client"
 )
 
 // HealthHandler handles health check endpoints
 type HealthHandler struct {
-	db    *gorm.DB
-	redis *redis.Client
+	db       *gorm.DB
+	redis    *redis.Client
+	mlClient *client.MLClient
 }
 
 // NewHealthHandler creates a new health handler
-func NewHealthHandler(db *gorm.DB, redis *redis.Client) *HealthHandler {
+func NewHealthHandler(db *gorm.DB, redis *redis.Client, mlClient *client.MLClient) *HealthHandler {
 	return &HealthHandler{
-		db:    db,
-		redis: redis,
+		db:       db,
+		redis:    redis,
+		mlClient: mlClient,
 	}
 }
 
@@ -64,6 +68,18 @@ func (h *HealthHandler) Health(c *gin.Context) {
 		}
 	} else {
 		components["redis"] = "not configured"
+	}
+
+	// Check ML Service
+	if h.mlClient != nil {
+		if resp, err := h.mlClient.Health(ctx); err != nil {
+			components["ml-service"] = "error: " + err.Error()
+			// ML service being down doesn't make the whole system unhealthy
+		} else {
+			components["ml-service"] = resp.Status + " (model: " + resp.ModelVersion + ")"
+		}
+	} else {
+		components["ml-service"] = "not configured"
 	}
 
 	status := "healthy"

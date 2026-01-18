@@ -7,6 +7,7 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 
+	"github.com/ressKim-io/EvoGuard/api-service/internal/adapter/client"
 	"github.com/ressKim-io/EvoGuard/api-service/internal/adapter/http/handler"
 	"github.com/ressKim-io/EvoGuard/api-service/internal/adapter/http/middleware"
 	"github.com/ressKim-io/EvoGuard/api-service/internal/adapter/repository/postgres"
@@ -14,7 +15,7 @@ import (
 )
 
 // Setup creates and configures the Gin router
-func Setup(db *gorm.DB, redisClient *redis.Client, logger *zap.Logger) *gin.Engine {
+func Setup(db *gorm.DB, redisClient *redis.Client, mlClient *client.MLClient, logger *zap.Logger) *gin.Engine {
 	router := gin.New()
 
 	// Middleware
@@ -24,7 +25,7 @@ func Setup(db *gorm.DB, redisClient *redis.Client, logger *zap.Logger) *gin.Engi
 	router.Use(middleware.CORS())
 
 	// Health endpoints
-	healthHandler := handler.NewHealthHandler(db, redisClient)
+	healthHandler := handler.NewHealthHandler(db, redisClient, mlClient)
 	router.GET("/health", healthHandler.Health)
 	router.GET("/ready", healthHandler.Ready)
 

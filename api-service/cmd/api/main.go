@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
+	"github.com/ressKim-io/EvoGuard/api-service/internal/adapter/client"
 	"github.com/ressKim-io/EvoGuard/api-service/internal/adapter/http/router"
 	"github.com/ressKim-io/EvoGuard/api-service/internal/infrastructure/cache"
 	"github.com/ressKim-io/EvoGuard/api-service/internal/infrastructure/config"
@@ -67,8 +68,15 @@ func run() error {
 		log.Info("Connected to Redis")
 	}
 
+	// Initialize ML Service client
+	mlClient := client.NewMLClient(
+		cfg.MLService.URL,
+		time.Duration(cfg.MLService.Timeout)*time.Second,
+	)
+	log.Info("ML Service client initialized", zap.String("url", cfg.MLService.URL))
+
 	// Setup router
-	r := router.Setup(db, redisClient, log)
+	r := router.Setup(db, redisClient, mlClient, log)
 
 	// Create HTTP server
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)

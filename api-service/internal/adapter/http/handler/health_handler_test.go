@@ -14,7 +14,7 @@ func TestHealthHandler_Health(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	t.Run("healthy when no dependencies", func(t *testing.T) {
-		handler := NewHealthHandler(nil, nil)
+		handler := NewHealthHandler(nil, nil, nil)
 
 		router := gin.New()
 		router.GET("/health", handler.Health)
@@ -38,7 +38,7 @@ func TestHealthHandler_Ready(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	t.Run("ready when no database", func(t *testing.T) {
-		handler := NewHealthHandler(nil, nil)
+		handler := NewHealthHandler(nil, nil, nil)
 
 		router := gin.New()
 		router.GET("/ready", handler.Ready)
