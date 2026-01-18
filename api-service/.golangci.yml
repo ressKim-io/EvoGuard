@@ -179,9 +179,6 @@ issues:
 # =============================================================================
 
 output:
-  # Output format (golangci-lint v1.x compatible)
-  format: colored-line-number
-
   # Print lines of code with issue
   print-issued-lines: true
 
@@ -190,3 +187,8 @@ output:
 
   # Sort results by file, line, column
   sort-results: true
+
+  # Output formats configuration (v2.x compatible)
+  formats:
+    - format: colored-line-number
+      path: stdout
