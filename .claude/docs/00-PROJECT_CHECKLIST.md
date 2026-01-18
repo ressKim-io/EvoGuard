@@ -78,11 +78,11 @@
 
 | 항목 | 상태 | 관련 문서 |
 |------|------|-----------|
-| 테스트 가이드 문서 | ⬚ | `10-TESTING.md` |
+| 테스트 가이드 문서 | ✅ | `10-TESTING.md` |
 | Go 테스트 구조 | ⬚ | `api-service/*_test.go` |
-| Python 테스트 구조 | ⬚ | `*/tests/` |
-| 커버리지 목표 설정 | ⬚ | CI 설정 |
-| E2E 테스트 계획 | ⬚ | - |
+| Python 테스트 구조 | ✅ | `attacker/tests/` |
+| 커버리지 목표 설정 | ✅ | `codecov.yml`, CI 설정 |
+| E2E 테스트 계획 | ✅ | `10-TESTING.md` |
 
 ### 권장 커버리지 목표
 - Unit Test: 70%+

@@ -89,6 +89,17 @@ jobs:
         working-directory: api-service
         run: go test -v -race -coverprofile=coverage.out ./...
 
+      - name: Check coverage threshold
+        working-directory: api-service
+        run: |
+          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print substr($3, 1, length($3)-1)}')
+          echo "Total coverage: ${COVERAGE}%"
+          if (( $(echo "$COVERAGE < 60" | bc -l) )); then
+            echo "Coverage ${COVERAGE}% is below minimum threshold of 60%"
+            exit 1
+          fi
+          echo "Coverage ${COVERAGE}% meets minimum threshold of 60%"
+
       - name: Upload coverage
         uses: codecov/codecov-action@v4
         with:
@@ -174,7 +185,7 @@ jobs:
       - name: Run pytest
         if: steps.check.outputs.exists == 'true'
         working-directory: ${{ matrix.service }}
-        run: uv run pytest -v --cov=. --cov-report=xml
+        run: uv run pytest -v --cov=. --cov-report=xml --cov-fail-under=60
 
       - name: Upload coverage
         if: steps.check.outputs.exists == 'true'
