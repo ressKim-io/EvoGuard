@@ -1,0 +1,93 @@
+# =============================================================================
+# Codecov Configuration
+# =============================================================================
+# Documentation: https://docs.codecov.io/docs/codecov-yaml
+
+coverage:
+  # 프로젝트 전체 커버리지 설정
+  status:
+    project:
+      default:
+        target: 60%              # 프로젝트 커버리지 목표
+        threshold: 1%            # 허용 오차
+        if_ci_failed: error      # CI 실패 시 에러
+
+    # PR에서 변경된 코드의 커버리지
+    patch:
+      default:
+        target: 70%              # 새로 추가된 코드 커버리지 목표
+        threshold: 1%
+
+  # 커버리지 정밀도 설정
+  precision: 2
+  round: down
+  range: "40...100"
+
+# =============================================================================
+# Flags (서비스별 커버리지 추적)
+# =============================================================================
+flags:
+  # Go 서비스
+  go:
+    paths:
+      - api-service/
+    carryforward: true
+
+  # Python 서비스들
+  python-attacker:
+    paths:
+      - attacker/
+    carryforward: true
+
+  python-defender:
+    paths:
+      - defender/
+    carryforward: true
+
+  python-ml-service:
+    paths:
+      - ml-service/
+    carryforward: true
+
+  python-training:
+    paths:
+      - training/
+    carryforward: true
+
+  python-mlops:
+    paths:
+      - mlops/
+    carryforward: true
+
+# =============================================================================
+# 무시할 파일/경로
+# =============================================================================
+ignore:
+  - "**/*_test.go"           # Go 테스트 파일
+  - "**/tests/**"            # Python 테스트 폴더
+  - "**/conftest.py"         # pytest fixtures
+  - "**/__pycache__/**"
+  - "**/migrations/**"
+  - "scripts/**"
+  - "infra/**"
+  - "*.md"
+  - "*.yml"
+  - "*.yaml"
+  - "*.toml"
+  - "Makefile"
+
+# =============================================================================
+# PR 코멘트 설정
+# =============================================================================
+comment:
+  layout: "header, diff, flags, components"
+  behavior: default
+  require_changes: true
+  require_base: false
+  require_head: true
+
+# =============================================================================
+# GitHub 체크 설정
+# =============================================================================
+github_checks:
+  annotations: true
