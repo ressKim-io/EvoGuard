@@ -236,6 +236,7 @@ BitsAndBytesConfig(
 - `dev-02-environment.md` - 환경 변수 관리
 - `dev-03-code-quality.md` - 코드 품질 도구 (lint, format)
 - `dev-04-templates.md` - PR/Issue 템플릿 가이드
+- `dev-05-mlops-local.md` - MLOps 로컬 환경 (Docker Compose)
 
 ### Git 가이드
 - `git-01-rules.md` - Git 규칙

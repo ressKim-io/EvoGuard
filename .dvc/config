@@ -1,0 +1,16 @@
+[core]
+    autostage = true
+    remote = minio
+
+[cache]
+    type = reflink,hardlink,symlink,copy
+
+# Local MinIO (development)
+[remote "minio"]
+    url = s3://dvc
+    endpointurl = http://localhost:9000
+
+# AWS S3 (production) - uncomment when needed
+# [remote "s3"]
+#     url = s3://your-bucket/dvc
+#     region = ap-northeast-2

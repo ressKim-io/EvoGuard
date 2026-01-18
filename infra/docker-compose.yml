@@ -1,0 +1,161 @@
+# =============================================================================
+# EvoGuard Development Environment
+# =============================================================================
+# Usage:
+#   docker compose up -d          # Start all services
+#   docker compose up -d postgres # Start specific service
+#   docker compose logs -f        # View logs
+#   docker compose down           # Stop all services
+#   docker compose down -v        # Stop and remove volumes
+# =============================================================================
+
+services:
+  # ===========================================================================
+  # PostgreSQL - Main Database
+  # ===========================================================================
+  postgres:
+    image: bitnami/postgresql:16
+    container_name: evoguard-postgres
+    environment:
+      - POSTGRESQL_USERNAME=${DB_USER:-postgres}
+      - POSTGRESQL_PASSWORD=${DB_PASSWORD:-postgres}
+      - POSTGRESQL_DATABASE=${DB_NAME:-evoguard}
+      - POSTGRESQL_POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/bitnami/postgresql
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-evoguard}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - evoguard-network
+
+  # ===========================================================================
+  # Redis - Cache & Queue
+  # ===========================================================================
+  redis:
+    image: bitnami/redis:7.2
+    container_name: evoguard-redis
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - ALLOW_EMPTY_PASSWORD=${REDIS_ALLOW_EMPTY:-yes}
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/bitnami/redis/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - evoguard-network
+
+  # ===========================================================================
+  # MinIO - S3-Compatible Object Storage (for MLflow artifacts)
+  # ===========================================================================
+  minio:
+    image: bitnami/minio:2024
+    container_name: evoguard-minio
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - MINIO_DEFAULT_BUCKETS=${MINIO_BUCKET:-mlflow}
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/bitnami/minio/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - evoguard-network
+
+  # ===========================================================================
+  # MLflow - Experiment Tracking & Model Registry
+  # ===========================================================================
+  mlflow:
+    build:
+      context: ./mlflow
+      dockerfile: Dockerfile
+    container_name: evoguard-mlflow
+    environment:
+      - MLFLOW_BACKEND_STORE_URI=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${MLFLOW_DB:-mlflow}
+      - MLFLOW_ARTIFACT_ROOT=s3://${MINIO_BUCKET:-mlflow}/artifacts
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER:-minioadmin}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
+    ports:
+      - "${MLFLOW_PORT:-5000}:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - evoguard-network
+
+  # ===========================================================================
+  # Prometheus - Metrics Collection
+  # ===========================================================================
+  prometheus:
+    image: bitnami/prometheus:2
+    container_name: evoguard-prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/opt/bitnami/prometheus/conf/prometheus.yml:ro
+      - prometheus_data:/opt/bitnami/prometheus/data
+    networks:
+      - evoguard-network
+    profiles:
+      - monitoring
+
+  # ===========================================================================
+  # Grafana - Visualization
+  # ===========================================================================
+  grafana:
+    image: bitnami/grafana:10
+    container_name: evoguard-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - grafana_data:/opt/bitnami/grafana/data
+    depends_on:
+      - prometheus
+    networks:
+      - evoguard-network
+    profiles:
+      - monitoring
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  evoguard-network:
+    driver: bridge
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  prometheus_data:
+  grafana_data:

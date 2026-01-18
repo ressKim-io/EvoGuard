@@ -1,0 +1,14 @@
+# Models Directory
+# This directory contains model checkpoints tracked by DVC.
+# Large model files are stored in remote storage (MinIO/S3).
+#
+# Usage:
+#   dvc pull           # Download models from remote
+#   dvc push           # Upload models to remote
+#
+# Structure:
+#   models/
+#   ├── defender/      # Defender model checkpoints
+#   │   ├── base/      # Base BERT model
+#   │   └── finetuned/ # QLoRA fine-tuned models
+#   └── attacker/      # Attacker model configs

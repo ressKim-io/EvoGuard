@@ -1,0 +1,14 @@
+# Data Directory
+# This directory contains datasets tracked by DVC.
+# Large files are stored in remote storage (MinIO/S3).
+#
+# Usage:
+#   dvc pull           # Download data from remote
+#   dvc push           # Upload data to remote
+#   dvc add data/raw   # Track new data
+#
+# Structure:
+#   data/
+#   ├── raw/           # Raw, immutable data
+#   ├── processed/     # Cleaned, transformed data
+#   └── external/      # External data sources

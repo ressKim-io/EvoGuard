@@ -112,7 +112,8 @@ dmypy.json
 # ML / Data Science
 # ========================================
 # Datasets
-data/
+data/*
+!data/.gitkeep
 *.csv
 *.parquet
 *.json
@@ -120,7 +121,8 @@ data/
 !tsconfig.json
 
 # Model files
-models/
+models/*
+!models/.gitkeep
 *.pt
 *.pth
 *.bin

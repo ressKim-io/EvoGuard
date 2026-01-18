@@ -30,7 +30,7 @@
 | Makefile (공통 명령어) | ✅ | `Makefile`, `dev-01-makefile.md` |
 | 환경 변수 템플릿 | ✅ | `.env.example`, `dev-02-environment.md` |
 | EditorConfig | ✅ | `.editorconfig` |
-| Docker Compose 개발 환경 | ⬚ | `infra/docker-compose.yml` |
+| Docker Compose 개발 환경 | ✅ | `infra/docker-compose.yml` |
 | 원커맨드 셋업 | ✅ | `make setup` |
 
 ### 왜 필요한가?
@@ -95,9 +95,10 @@
 
 | 항목 | 상태 | 관련 문서 |
 |------|------|-----------|
-| MLflow 실험 추적 | ⬚ | `py-05-mlflow.md` |
-| 모델 레지스트리 | ⬚ | `05-MLOPS.md` |
-| 데이터 버전 관리 | ⬚ | DVC 또는 유사 도구 |
+| MLflow 실험 추적 | ✅ | `py-05-mlflow.md`, `dev-05-mlops-local.md` |
+| 모델 레지스트리 | ✅ | `05-MLOPS.md` |
+| 데이터 버전 관리 (DVC) | ✅ | `.dvc/config` |
+| Docker Compose MLOps | ✅ | `infra/docker-compose.yml` |
 | Feature Store | ⬚ | 설계 필요 |
 | 모델 모니터링 | ⬚ | Drift detection |
 
@@ -155,9 +156,9 @@
 5. ✅ CI/CD 파이프라인
 6. ✅ PR/Issue 템플릿
 
-### Phase 3: MLOps
-7. ⬚ MLflow 설정
-8. ⬚ 데이터 버전 관리
+### Phase 3: MLOps ✅
+7. ✅ MLflow + Docker Compose 설정
+8. ✅ 데이터 버전 관리 (DVC)
 
 ### Phase 4: 운영
 9. ⬚ 모니터링 설정
