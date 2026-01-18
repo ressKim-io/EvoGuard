@@ -208,7 +208,76 @@ git commit -m "fix(auth): resolve token expiration"
 git push -f origin feature/JIRA-123-my-branch
 ```
 
-## 8. PR 템플릿 (.github/PULL_REQUEST_TEMPLATE.md)
+## 8. Pull Request 규칙
+
+### PR 제목 형식
+커밋 메시지와 동일한 Conventional 형식 사용:
+```
+<type>(<scope>): <subject>
+```
+
+**예시:**
+```
+feat(auth): add OAuth2 login support
+fix(api): resolve null pointer in battle handler
+docs(readme): update installation guide
+refactor(ml): simplify prediction pipeline
+```
+
+### 머지 전략: Squash and Merge (권장)
+```
+feature/JIRA-123-login (5 commits)
+    ↓ Squash and Merge
+main (1 commit: "feat(auth): add login feature (#12)")
+```
+
+| 전략 | 사용 시점 |
+|------|----------|
+| **Squash and Merge** | 일반적인 feature/fix (권장) |
+| Rebase and Merge | 커밋 히스토리 유지 필요 시 |
+| Merge Commit | 사용 안 함 |
+
+### PR 체크리스트
+```markdown
+- [ ] 테스트 통과 (`make test`)
+- [ ] 린트 통과 (`make lint`)
+- [ ] Self-review 완료
+- [ ] 문서 업데이트 (필요 시)
+- [ ] PR 제목이 Conventional 형식
+```
+
+### PR 워크플로우 (Solo)
+```bash
+# 1. Feature 브랜치에서 작업
+git checkout -b feature/JIRA-123-new-feature
+
+# 2. 작업 + 커밋 (여러 개 OK)
+git commit -m "feat(auth): add login form"
+git commit -m "feat(auth): add validation"
+git commit -m "fix(auth): fix typo"
+
+# 3. Push + PR 생성
+git push -u origin feature/JIRA-123-new-feature
+gh pr create --title "feat(auth): add login feature" --body "..."
+
+# 4. CI 통과 확인 후 Squash Merge
+gh pr merge --squash
+
+# 5. 로컬 정리
+git checkout main && git pull
+git branch -d feature/JIRA-123-new-feature
+```
+
+### GitHub 설정 권장
+```
+Settings > General > Pull Requests:
+  ✅ Allow squash merging (Default)
+  ⬜ Allow merge commits
+  ⬜ Allow rebase merging
+  ✅ Automatically delete head branches
+```
+
+### PR 템플릿 (.github/PULL_REQUEST_TEMPLATE.md)
 ```markdown
 ## Summary
 <!-- 변경 내용 -->
