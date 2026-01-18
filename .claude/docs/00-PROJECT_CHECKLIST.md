@@ -113,10 +113,10 @@
 
 | 항목 | 상태 | 관련 문서 |
 |------|------|-----------|
-| 구조화된 로깅 표준 | ⬚ | `go-03-config-logging.md` |
-| Prometheus 메트릭 정의 | ⬚ | `go-05-gin-prometheus.md` |
-| Grafana 대시보드 | ⬚ | `infra/grafana/` |
-| 알림 설정 | ⬚ | AlertManager |
+| 구조화된 로깅 표준 | ✅ | `go-03-config-logging.md` |
+| Prometheus 메트릭 정의 | ✅ | `dev-07-monitoring.md` |
+| Grafana 대시보드 | ✅ | `infra/grafana/provisioning/` |
+| 알림 설정 | ✅ | `dev-07-monitoring.md` |
 
 ---
 
@@ -124,9 +124,9 @@
 
 | 항목 | 상태 | 관련 문서 |
 |------|------|-----------|
-| 시크릿 관리 방법 | ⬚ | K8s Secrets / Vault |
-| API 인증 방식 | ⬚ | JWT / OAuth2 |
-| 보안 스캐닝 | ⬚ | Trivy, gosec |
+| 시크릿 관리 방법 | ✅ | `dev-06-security.md` |
+| API 인증 방식 | ✅ | `dev-06-security.md` |
+| 보안 스캐닝 | ✅ | `dev-06-security.md` |
 | .gitignore 검증 | ✅ | `.gitignore` |
 
 ---
@@ -140,7 +140,7 @@
 | 환경 설정 가이드 | ✅ | `03-ENVIRONMENT_SETUP.md` |
 | API 명세 | ✅ | `06-API_SPEC.md` |
 | 개발 로드맵 | ✅ | `07-DEVELOPMENT_ROADMAP.md` |
-| Contributing 가이드 | ⬚ | `CONTRIBUTING.md` |
+| Contributing 가이드 | ✅ | `CONTRIBUTING.md` |
 
 ---
 
@@ -160,9 +160,10 @@
 7. ✅ MLflow + Docker Compose 설정
 8. ✅ 데이터 버전 관리 (DVC)
 
-### Phase 4: 운영
-9. ⬚ 모니터링 설정
-10. ⬚ 보안 강화
+### Phase 4: 운영 ✅
+9. ✅ 모니터링 설정
+10. ✅ 보안 강화
+11. ✅ CONTRIBUTING.md
 
 ---
 
@@ -180,4 +181,4 @@
 
 ---
 
-*마지막 업데이트: 2026-01-17*
+*마지막 업데이트: 2026-01-18*

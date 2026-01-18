@@ -1,0 +1,16 @@
+# Grafana Dashboard Provisioning
+# Auto-load dashboards from JSON files
+
+apiVersion: 1
+
+providers:
+  - name: 'EvoGuard Dashboards'
+    orgId: 1
+    folder: 'EvoGuard'
+    folderUid: 'evoguard'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/json
