@@ -138,10 +138,11 @@ runs/
 outputs/
 results/
 
-# Keep experiment logs (JSON, markdown reports)
+# Keep experiment logs (JSON, markdown reports, graphs)
 !ml-service/experiments/
 !ml-service/experiments/**/*.json
 !ml-service/experiments/**/*.md
+!ml-service/experiments/**/*.png
 
 # MLflow
 mlruns/
