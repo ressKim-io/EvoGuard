@@ -13,6 +13,23 @@ description = "Adversarial Learning based Content Moderation System"
 requires-python = ">=3.12"
 
 # =============================================================================
+# Dependency Groups - Shared Development Dependencies
+# =============================================================================
+# These can be referenced by individual services using:
+#   [tool.uv]
+#   dev-dependencies = { shared-dev = "../../pyproject.toml" }
+# =============================================================================
+
+[dependency-groups]
+shared-dev = [
+    "ruff>=0.4.0",
+    "mypy>=1.10",
+    "pytest>=8.0",
+    "pytest-cov>=4.1",
+    "pytest-asyncio>=0.23",
+]
+
+# =============================================================================
 # Ruff - Linter & Formatter
 # =============================================================================
 # Docs: https://docs.astral.sh/ruff/configuration/

@@ -6,6 +6,9 @@ from typing import Any
 import redis.asyncio as redis
 from pydantic import BaseModel
 
+from ml_service.core.config import get_settings
+from ml_service.core.exceptions import FeatureStoreConnectionError
+
 
 class OnlineStoreConfig(BaseModel):
     """Configuration for Online Store."""
@@ -19,12 +22,18 @@ class OnlineStoreConfig(BaseModel):
     default_ttl_seconds: int = 86400  # 24 hours
 
 
-# TTL policies by feature group
-DEFAULT_TTL_POLICIES: dict[str, int] = {
-    "text_features": 86400,      # 24 hours
-    "battle_features": 3600,     # 1 hour
-    "user_features": 21600,      # 6 hours
-}
+def get_ttl_policies() -> dict[str, int]:
+    """Get TTL policies from settings.
+
+    Returns:
+        Dictionary mapping feature group names to TTL in seconds.
+    """
+    settings = get_settings()
+    return {
+        "text_features": settings.text_features_ttl_seconds,
+        "battle_features": settings.battle_features_ttl_seconds,
+        "user_features": settings.user_features_ttl_seconds,
+    }
 
 
 class OnlineStore:
@@ -109,7 +118,8 @@ class OnlineStore:
         Returns:
             TTL in seconds.
         """
-        return DEFAULT_TTL_POLICIES.get(feature_group, self.config.default_ttl_seconds)
+        ttl_policies = get_ttl_policies()
+        return ttl_policies.get(feature_group, self.config.default_ttl_seconds)
 
     async def set_features(
         self,
@@ -131,7 +141,7 @@ class OnlineStore:
             ttl_seconds: Optional custom TTL. Uses default if not specified.
         """
         if not self._client:
-            raise RuntimeError("Not connected. Call connect() first.")
+            raise FeatureStoreConnectionError("Not connected. Call connect() first.")
 
         key = self._get_key(entity_type, entity_id, feature_group, version)
         ttl = ttl_seconds or self._get_ttl(feature_group)
@@ -165,7 +175,7 @@ class OnlineStore:
             Dictionary of features or None if not found.
         """
         if not self._client:
-            raise RuntimeError("Not connected. Call connect() first.")
+            raise FeatureStoreConnectionError("Not connected. Call connect() first.")
 
         key = self._get_key(entity_type, entity_id, feature_group, version)
         result = await self._client.hgetall(key)
@@ -196,7 +206,7 @@ class OnlineStore:
             Dictionary mapping entity_id -> features (or None if not found).
         """
         if not self._client:
-            raise RuntimeError("Not connected. Call connect() first.")
+            raise FeatureStoreConnectionError("Not connected. Call connect() first.")
 
         async with self._client.pipeline() as pipe:
             keys = []
@@ -231,7 +241,7 @@ class OnlineStore:
             True if key was deleted, False if not found.
         """
         if not self._client:
-            raise RuntimeError("Not connected. Call connect() first.")
+            raise FeatureStoreConnectionError("Not connected. Call connect() first.")
 
         key = self._get_key(entity_type, entity_id, feature_group, version)
         deleted = await self._client.delete(key)
@@ -256,7 +266,7 @@ class OnlineStore:
             True if features exist.
         """
         if not self._client:
-            raise RuntimeError("Not connected. Call connect() first.")
+            raise FeatureStoreConnectionError("Not connected. Call connect() first.")
 
         key = self._get_key(entity_type, entity_id, feature_group, version)
         return await self._client.exists(key) > 0
@@ -280,7 +290,7 @@ class OnlineStore:
             Remaining TTL in seconds, -1 if no TTL, -2 if key doesn't exist.
         """
         if not self._client:
-            raise RuntimeError("Not connected. Call connect() first.")
+            raise FeatureStoreConnectionError("Not connected. Call connect() first.")
 
         key = self._get_key(entity_type, entity_id, feature_group, version)
         return await self._client.ttl(key)
@@ -306,7 +316,7 @@ class OnlineStore:
             True if TTL was set, False if key doesn't exist.
         """
         if not self._client:
-            raise RuntimeError("Not connected. Call connect() first.")
+            raise FeatureStoreConnectionError("Not connected. Call connect() first.")
 
         key = self._get_key(entity_type, entity_id, feature_group, version)
         ttl = ttl_seconds or self._get_ttl(feature_group)
@@ -330,7 +340,7 @@ class OnlineStore:
             ttl_seconds: Optional custom TTL.
         """
         if not self._client:
-            raise RuntimeError("Not connected. Call connect() first.")
+            raise FeatureStoreConnectionError("Not connected. Call connect() first.")
 
         ttl = ttl_seconds or self._get_ttl(feature_group)
         updated_at = datetime.now(UTC).isoformat()

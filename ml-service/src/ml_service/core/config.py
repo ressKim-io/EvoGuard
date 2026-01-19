@@ -42,6 +42,37 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO", description="Log level")
     log_format: str = Field(default="json", description="Log format (json or text)")
 
+    # Feature Store TTL settings (seconds)
+    text_features_ttl_seconds: int = Field(
+        default=86400, description="TTL for text features (24 hours)"
+    )
+    battle_features_ttl_seconds: int = Field(
+        default=3600, description="TTL for battle features (1 hour)"
+    )
+    user_features_ttl_seconds: int = Field(
+        default=21600, description="TTL for user features (6 hours)"
+    )
+    default_features_ttl_seconds: int = Field(
+        default=86400, description="Default TTL for features (24 hours)"
+    )
+
+    # Monitoring settings
+    low_confidence_threshold: float = Field(
+        default=0.7,
+        ge=0.0,
+        le=1.0,
+        description="Threshold below which predictions are considered low confidence",
+    )
+    prediction_buffer_size: int = Field(
+        default=1000, ge=100, description="Size of the in-memory prediction buffer"
+    )
+    prediction_sample_rate: float = Field(
+        default=0.01,
+        ge=0.0,
+        le=1.0,
+        description="Rate at which to sample predictions for detailed logging",
+    )
+
 
 @lru_cache
 def get_settings() -> Settings:

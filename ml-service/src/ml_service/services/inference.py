@@ -1,6 +1,7 @@
 """Inference service for text classification."""
 
 from ml_service.core.config import get_settings
+from ml_service.core.exceptions import ModelNotLoadedError
 from ml_service.core.logging import get_logger
 from ml_service.models.classifier import BaseClassifier, ClassifierResult, MockClassifier
 
@@ -57,10 +58,10 @@ class InferenceService:
             ClassifierResult with classification details.
 
         Raises:
-            RuntimeError: If model is not loaded.
+            ModelNotLoadedError: If model is not loaded.
         """
         if self._classifier is None:
-            raise RuntimeError("Model not loaded")
+            raise ModelNotLoadedError("Model not loaded. Call load_model() first.")
 
         result = self._classifier.predict(text)
 
@@ -83,10 +84,10 @@ class InferenceService:
             List of ClassifierResult objects.
 
         Raises:
-            RuntimeError: If model is not loaded.
+            ModelNotLoadedError: If model is not loaded.
         """
         if self._classifier is None:
-            raise RuntimeError("Model not loaded")
+            raise ModelNotLoadedError("Model not loaded. Call load_model() first.")
 
         results = self._classifier.predict_batch(texts)
 
