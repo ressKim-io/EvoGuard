@@ -99,8 +99,8 @@
 | 모델 레지스트리 | ✅ | `05-MLOPS.md` |
 | 데이터 버전 관리 (DVC) | ✅ | `.dvc/config` |
 | Docker Compose MLOps | ✅ | `infra/docker-compose.yml` |
-| Feature Store | ⬚ | 설계 필요 |
-| 모델 모니터링 | ⬚ | Drift detection |
+| Feature Store | 🔄 | `11-FEATURE_STORE.md` |
+| 모델 모니터링 | 🔄 | `12-MODEL_MONITORING.md` |
 
 ### MLOps 성숙도 단계
 1. **Level 0**: 수동 프로세스
@@ -181,4 +181,4 @@
 
 ---
 
-*마지막 업데이트: 2026-01-18*
+*마지막 업데이트: 2026-01-19*

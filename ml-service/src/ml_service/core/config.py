@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     mlflow_tracking_uri: str | None = Field(default=None, description="MLflow tracking URI")
     mlflow_model_alias: str = Field(default="champion", description="MLflow model alias to load")
 
+    # Feature Store settings
+    feature_store_db_url: str | None = Field(
+        default=None,
+        description="PostgreSQL URL for Feature Store (postgresql+asyncpg://...)",
+    )
+
     # Logging
     log_level: str = Field(default="INFO", description="Log level")
     log_format: str = Field(default="json", description="Log format (json or text)")

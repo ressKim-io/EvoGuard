@@ -11,6 +11,8 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from ml_service.api.routes import router
 from ml_service.core.config import get_settings
 from ml_service.core.logging import get_logger, setup_logging
+from ml_service.feature_store.api import router as feature_store_router
+from ml_service.feature_store.registry import close_database, create_tables, init_database
 from ml_service.services.inference import get_inference_service
 
 # Initialize logging
@@ -21,17 +23,38 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan handler for startup/shutdown."""
+    settings = get_settings()
+
     # Startup
     logger.info("application_starting")
+
+    # Initialize inference service
     service = get_inference_service()
     service.load_model()
-    logger.info("application_started", model_version=service.model_version)
+    logger.info("inference_service_loaded", model_version=service.model_version)
+
+    # Initialize Feature Store database (if configured)
+    if settings.feature_store_db_url:
+        try:
+            init_database(settings.feature_store_db_url)
+            await create_tables()
+            logger.info("feature_store_initialized")
+        except Exception as e:
+            logger.warning("feature_store_init_failed", error=str(e))
+
+    logger.info("application_started")
 
     yield
 
     # Shutdown
     logger.info("application_shutting_down")
     service.unload_model()
+
+    # Close Feature Store database
+    if settings.feature_store_db_url:
+        await close_database()
+        logger.info("feature_store_closed")
+
     logger.info("application_stopped")
 
 
@@ -59,6 +82,7 @@ def create_app() -> FastAPI:
 
     # Include API routes
     app.include_router(router)
+    app.include_router(feature_store_router)
 
     # Prometheus metrics endpoint
     @app.get("/metrics", include_in_schema=False)
