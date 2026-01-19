@@ -2,6 +2,7 @@
 
 import pytest
 
+from ml_service.core.exceptions import ModelNotLoadedError
 from ml_service.services.inference import InferenceService
 
 
@@ -34,12 +35,12 @@ class TestInferenceService:
 
     def test_classify_without_model_raises(self, service: InferenceService) -> None:
         """Test that classify raises when model not loaded."""
-        with pytest.raises(RuntimeError, match="Model not loaded"):
+        with pytest.raises(ModelNotLoadedError, match="Model not loaded"):
             service.classify("test")
 
     def test_classify_batch_without_model_raises(self, service: InferenceService) -> None:
         """Test that classify_batch raises when model not loaded."""
-        with pytest.raises(RuntimeError, match="Model not loaded"):
+        with pytest.raises(ModelNotLoadedError, match="Model not loaded"):
             service.classify_batch(["test"])
 
     def test_classify_with_model(self, service: InferenceService) -> None:

@@ -3,6 +3,7 @@
 import pytest
 from fakeredis import aioredis as fakeredis
 
+from ml_service.core.exceptions import FeatureStoreConnectionError
 from ml_service.feature_store.online import OnlineStore, OnlineStoreConfig
 
 
@@ -268,7 +269,7 @@ class TestOnlineStore:
         store = OnlineStore(OnlineStoreConfig())
         # Don't connect
 
-        with pytest.raises(RuntimeError, match="Not connected"):
+        with pytest.raises(FeatureStoreConnectionError, match="Not connected"):
             await store.get_features(
                 entity_type="text",
                 entity_id="entity-1",

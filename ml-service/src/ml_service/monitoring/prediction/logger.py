@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
+from ml_service.core.config import get_settings
 from ml_service.monitoring.metrics.collector import MetricsCollector
 
 logger = logging.getLogger(__name__)
@@ -46,26 +47,39 @@ class PredictionLogger:
     def __init__(
         self,
         model_name: str,
-        low_confidence_threshold: float = 0.7,
-        buffer_size: int = 1000,
-        sample_rate: float = 0.01,
+        low_confidence_threshold: float | None = None,
+        buffer_size: int | None = None,
+        sample_rate: float | None = None,
     ) -> None:
         """Initialize the prediction logger.
 
         Args:
             model_name: Name of the model.
             low_confidence_threshold: Threshold below which predictions
-                are considered low confidence.
+                are considered low confidence. Uses settings default if None.
             buffer_size: Size of the in-memory prediction buffer.
+                Uses settings default if None.
             sample_rate: Rate at which to sample predictions for detailed logging.
+                Uses settings default if None.
         """
+        settings = get_settings()
         self.model_name = model_name
-        self.threshold = low_confidence_threshold
-        self.buffer_size = buffer_size
-        self.sample_rate = sample_rate
+        self.threshold = (
+            low_confidence_threshold
+            if low_confidence_threshold is not None
+            else settings.low_confidence_threshold
+        )
+        self.buffer_size = (
+            buffer_size if buffer_size is not None else settings.prediction_buffer_size
+        )
+        self.sample_rate = (
+            sample_rate
+            if sample_rate is not None
+            else settings.prediction_sample_rate
+        )
 
         self.metrics_collector = MetricsCollector.get_instance(model_name)
-        self._prediction_buffer: deque[PredictionRecord] = deque(maxlen=buffer_size)
+        self._prediction_buffer: deque[PredictionRecord] = deque(maxlen=self.buffer_size)
         self._start_time: float | None = None
 
         # Counters
