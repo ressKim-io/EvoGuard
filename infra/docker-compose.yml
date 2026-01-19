@@ -184,7 +184,33 @@ services:
       - "${PROMETHEUS_PORT:-9090}:9090"
     volumes:
       - ./prometheus/prometheus.yml:/opt/bitnami/prometheus/conf/prometheus.yml:ro
+      - ./prometheus/rules:/opt/bitnami/prometheus/conf/rules:ro
       - prometheus_data:/opt/bitnami/prometheus/data
+    depends_on:
+      - alertmanager
+    networks:
+      - evoguard-network
+    profiles:
+      - monitoring
+
+  # ===========================================================================
+  # AlertManager - Alert Routing & Notifications
+  # ===========================================================================
+  alertmanager:
+    image: bitnami/alertmanager:0
+    container_name: evoguard-alertmanager
+    environment:
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
+    ports:
+      - "${ALERTMANAGER_PORT:-9093}:9093"
+    volumes:
+      - ./alertmanager/alertmanager.yml:/opt/bitnami/alertmanager/conf/alertmanager.yml:ro
+      - ./alertmanager/templates:/etc/alertmanager/templates:ro
+      - alertmanager_data:/opt/bitnami/alertmanager/data
+    command:
+      - '--config.file=/opt/bitnami/alertmanager/conf/alertmanager.yml'
+      - '--storage.path=/opt/bitnami/alertmanager/data'
+      - '--web.external-url=http://localhost:9093'
     networks:
       - evoguard-network
     profiles:
@@ -201,6 +227,9 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_UNIFIED_ALERTING_ENABLED=true
+      - GF_ALERTING_ENABLED=false
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
       - DB_USER=${DB_USER:-postgres}
       - DB_PASSWORD=${DB_PASSWORD:-postgres}
     ports:
@@ -210,6 +239,7 @@ services:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
     depends_on:
       - prometheus
+      - alertmanager
     networks:
       - evoguard-network
     profiles:
@@ -230,4 +260,5 @@ volumes:
   redis_data:
   minio_data:
   prometheus_data:
+  alertmanager_data:
   grafana_data:

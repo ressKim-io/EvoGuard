@@ -1,0 +1,145 @@
+# AlertManager Configuration
+# Route and handle alerts from Prometheus
+
+global:
+  # Default SMTP settings (override per receiver)
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: 'alerts@evoguard.example.com'
+  smtp_require_tls: true
+
+  # Slack API URL (set via environment variable)
+  slack_api_url: '${SLACK_WEBHOOK_URL}'
+
+  # Resolution timeout
+  resolve_timeout: 5m
+
+# Route tree - how alerts are routed to receivers
+route:
+  # Default receiver
+  receiver: 'default-receiver'
+
+  # Group alerts by these labels
+  group_by: ['alertname', 'model', 'severity']
+
+  # Wait time before sending a group
+  group_wait: 30s
+
+  # Interval between notifications for same group
+  group_interval: 5m
+
+  # Interval for re-sending alerts
+  repeat_interval: 4h
+
+  # Child routes
+  routes:
+    # Critical alerts - immediate notification
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+      group_wait: 10s
+      repeat_interval: 1h
+      continue: true
+
+    # Warning alerts - standard notification
+    - match:
+        severity: warning
+      receiver: 'warning-alerts'
+      group_wait: 1m
+      repeat_interval: 4h
+
+    # Info alerts - low priority
+    - match:
+        severity: info
+      receiver: 'info-alerts'
+      group_wait: 5m
+      repeat_interval: 24h
+
+    # ML team specific alerts
+    - match:
+        team: ml
+      receiver: 'ml-team'
+      continue: false
+
+# Inhibition rules - suppress redundant alerts
+inhibit_rules:
+  # If critical F1 alert fires, suppress warning F1 alert
+  - source_match:
+      severity: 'critical'
+      alertname: 'ModelF1ScoreCritical'
+    target_match:
+      severity: 'warning'
+      alertname: 'ModelF1ScoreWarning'
+    equal: ['model']
+
+  # If concept drift fires, suppress data drift (more general issue)
+  - source_match:
+      alertname: 'ConceptDriftDetected'
+    target_match:
+      alertname: 'DataDriftDetected'
+    equal: ['model']
+
+# Receivers - notification destinations
+receivers:
+  # Default receiver (console/logs)
+  - name: 'default-receiver'
+    webhook_configs:
+      - url: 'http://ml-service:8001/webhooks/alerts'
+        send_resolved: true
+
+  # Critical alerts - Slack + PagerDuty
+  - name: 'critical-alerts'
+    slack_configs:
+      - channel: '#ml-alerts-critical'
+        send_resolved: true
+        title: '{{ template "slack.default.title" . }}'
+        text: '{{ template "slack.default.text" . }}'
+        color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+        actions:
+          - type: button
+            text: 'Runbook'
+            url: '{{ (index .Alerts 0).Annotations.runbook_url }}'
+          - type: button
+            text: 'Dashboard'
+            url: 'http://grafana:3000/d/ml-monitoring'
+    # Uncomment for PagerDuty integration
+    # pagerduty_configs:
+    #   - service_key: '${PAGERDUTY_SERVICE_KEY}'
+    #     severity: critical
+
+  # Warning alerts - Slack only
+  - name: 'warning-alerts'
+    slack_configs:
+      - channel: '#ml-alerts'
+        send_resolved: true
+        title: '{{ template "slack.default.title" . }}'
+        text: '{{ template "slack.default.text" . }}'
+        color: '{{ if eq .Status "firing" }}warning{{ else }}good{{ end }}'
+
+  # Info alerts - Email digest
+  - name: 'info-alerts'
+    email_configs:
+      - to: 'ml-team@example.com'
+        send_resolved: false
+        headers:
+          Subject: '[EvoGuard] {{ .Status | toUpper }} - {{ .CommonLabels.alertname }}'
+
+  # ML Team - Slack channel
+  - name: 'ml-team'
+    slack_configs:
+      - channel: '#ml-team'
+        send_resolved: true
+        title: 'ML Model Alert: {{ .CommonLabels.alertname }}'
+        text: |
+          *Status:* {{ .Status | toUpper }}
+          *Model:* {{ .CommonLabels.model }}
+          *Severity:* {{ .CommonLabels.severity }}
+
+          {{ range .Alerts }}
+          • {{ .Annotations.summary }}
+            {{ .Annotations.description }}
+          {{ end }}
+        color: '{{ if eq .Status "firing" }}{{ if eq .CommonLabels.severity "critical" }}danger{{ else }}warning{{ end }}{{ else }}good{{ end }}'
+
+# Templates for notification formatting
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'

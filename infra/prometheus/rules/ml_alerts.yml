@@ -1,0 +1,163 @@
+# ML Model Monitoring Alert Rules
+# Prometheus alert rules for model performance and drift detection
+
+groups:
+  - name: ml-model-performance
+    interval: 30s
+    rules:
+      # F1 Score Critical - Model performance severely degraded
+      - alert: ModelF1ScoreCritical
+        expr: ml_model_f1_score{dataset="production"} < 0.7
+        for: 5m
+        labels:
+          severity: critical
+          team: ml
+        annotations:
+          summary: "Model F1 score critically low"
+          description: "Model {{ $labels.model }} F1 score is {{ $value | printf \"%.3f\" }} (threshold: 0.7)"
+          runbook_url: "https://wiki.example.com/runbooks/ml-f1-critical"
+
+      # F1 Score Warning - Model performance declining
+      - alert: ModelF1ScoreWarning
+        expr: ml_model_f1_score{dataset="production"} < 0.8 and ml_model_f1_score{dataset="production"} >= 0.7
+        for: 10m
+        labels:
+          severity: warning
+          team: ml
+        annotations:
+          summary: "Model F1 score below warning threshold"
+          description: "Model {{ $labels.model }} F1 score is {{ $value | printf \"%.3f\" }} (threshold: 0.8)"
+
+      # Precision Drop
+      - alert: ModelPrecisionDrop
+        expr: ml_model_precision{dataset="production"} < 0.75
+        for: 10m
+        labels:
+          severity: warning
+          team: ml
+        annotations:
+          summary: "Model precision dropped"
+          description: "Model {{ $labels.model }} precision is {{ $value | printf \"%.3f\" }}"
+
+      # Recall Drop
+      - alert: ModelRecallDrop
+        expr: ml_model_recall{dataset="production"} < 0.75
+        for: 10m
+        labels:
+          severity: warning
+          team: ml
+        annotations:
+          summary: "Model recall dropped"
+          description: "Model {{ $labels.model }} recall is {{ $value | printf \"%.3f\" }}"
+
+  - name: ml-drift-detection
+    interval: 1m
+    rules:
+      # Data Drift Detected - PSI threshold exceeded
+      - alert: DataDriftDetected
+        expr: ml_data_drift_psi > 0.2
+        for: 10m
+        labels:
+          severity: warning
+          team: ml
+        annotations:
+          summary: "Data drift detected"
+          description: "Feature {{ $labels.feature }} for model {{ $labels.model }} has PSI {{ $value | printf \"%.3f\" }} (threshold: 0.2)"
+
+      # Data Drift Critical - Severe distribution shift
+      - alert: DataDriftCritical
+        expr: ml_data_drift_psi > 0.5
+        for: 5m
+        labels:
+          severity: critical
+          team: ml
+        annotations:
+          summary: "Critical data drift detected"
+          description: "Feature {{ $labels.feature }} for model {{ $labels.model }} has severe PSI {{ $value | printf \"%.3f\" }}"
+
+      # Concept Drift Detected
+      - alert: ConceptDriftDetected
+        expr: ml_concept_drift_detected == 1
+        for: 5m
+        labels:
+          severity: critical
+          team: ml
+        annotations:
+          summary: "Concept drift detected"
+          description: "Model {{ $labels.model }} has detected concept drift. Consider retraining."
+
+  - name: ml-prediction-health
+    interval: 30s
+    rules:
+      # High Rate of Low Confidence Predictions
+      - alert: LowConfidencePredictionSpike
+        expr: |
+          (
+            rate(ml_low_confidence_predictions_total[5m])
+            / rate(ml_predictions_total[5m])
+          ) > 0.3
+        for: 10m
+        labels:
+          severity: warning
+          team: ml
+        annotations:
+          summary: "High rate of low confidence predictions"
+          description: "{{ $value | printf \"%.1f\" }}% of predictions for model {{ $labels.model }} have low confidence"
+
+      # No Predictions (Service might be down)
+      - alert: NoPredictions
+        expr: rate(ml_predictions_total[5m]) == 0
+        for: 15m
+        labels:
+          severity: warning
+          team: ml
+        annotations:
+          summary: "No predictions being made"
+          description: "Model {{ $labels.model }} has not made any predictions in the last 15 minutes"
+
+      # High Prediction Latency
+      - alert: HighPredictionLatency
+        expr: histogram_quantile(0.99, rate(ml_prediction_latency_seconds_bucket[5m])) > 1.0
+        for: 5m
+        labels:
+          severity: warning
+          team: ml
+        annotations:
+          summary: "High prediction latency"
+          description: "Model {{ $labels.model }} p99 latency is {{ $value | printf \"%.2f\" }}s (threshold: 1.0s)"
+
+      # Very High Prediction Latency
+      - alert: VeryHighPredictionLatency
+        expr: histogram_quantile(0.99, rate(ml_prediction_latency_seconds_bucket[5m])) > 5.0
+        for: 2m
+        labels:
+          severity: critical
+          team: ml
+        annotations:
+          summary: "Critical prediction latency"
+          description: "Model {{ $labels.model }} p99 latency is {{ $value | printf \"%.2f\" }}s"
+
+  - name: ml-retraining
+    interval: 1m
+    rules:
+      # Retrain Recommended
+      - alert: ModelRetrainRecommended
+        expr: ml_retrain_recommended == 1
+        for: 1m
+        labels:
+          severity: info
+          team: ml
+        annotations:
+          summary: "Model retraining recommended"
+          description: "Model {{ $labels.model }} drift metrics suggest retraining is needed"
+
+      # Model Not Retrained Recently
+      - alert: ModelStale
+        expr: (time() - ml_last_retrain_timestamp) > 604800  # 7 days
+        for: 1h
+        labels:
+          severity: info
+          team: ml
+        annotations:
+          summary: "Model has not been retrained recently"
+          description: "Model {{ $labels.model }} was last retrained {{ $value | humanizeDuration }} ago"

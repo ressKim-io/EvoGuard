@@ -24,6 +24,8 @@ dependencies = [
     "pytz>=2024.1",
     # Online Store dependencies
     "redis>=5.0.0",
+    # Alert System dependencies
+    "aiohttp>=3.9.0",
 ]
 
 [dependency-groups]

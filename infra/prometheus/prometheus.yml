@@ -3,15 +3,15 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
-# Alerting (optional)
-# alerting:
-#   alertmanagers:
-#     - static_configs:
-#         - targets: []
+# Alerting configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
 
-# Rule files (optional)
-# rule_files:
-#   - "rules/*.yml"
+# Rule files for alerting
+rule_files:
+  - "rules/*.yml"
 
 # Scrape configurations
 scrape_configs:
@@ -37,6 +37,11 @@ scrape_configs:
     static_configs:
       - targets: ["mlflow:5000"]
     metrics_path: /metrics
+
+  # AlertManager
+  - job_name: "alertmanager"
+    static_configs:
+      - targets: ["alertmanager:9093"]
 
   # PostgreSQL (with postgres_exporter)
   # - job_name: "postgres"

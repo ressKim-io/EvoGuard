@@ -1,0 +1,23 @@
+{{ define "slack.default.title" -}}
+[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .CommonLabels.alertname }}
+{{- end }}
+
+{{ define "slack.default.text" -}}
+{{ range .Alerts }}
+*Alert:* {{ .Labels.alertname }}
+*Severity:* {{ .Labels.severity }}
+*Model:* {{ .Labels.model }}
+{{ if .Labels.feature }}*Feature:* {{ .Labels.feature }}{{ end }}
+
+*Summary:* {{ .Annotations.summary }}
+*Description:* {{ .Annotations.description }}
+
+*Started:* {{ .StartsAt.Format "2006-01-02 15:04:05 MST" }}
+{{ if .EndsAt }}*Ended:* {{ .EndsAt.Format "2006-01-02 15:04:05 MST" }}{{ end }}
+---
+{{ end }}
+{{- end }}
+
+{{ define "slack.default.footer" -}}
+EvoGuard ML Monitoring | {{ .ExternalURL }}
+{{- end }}

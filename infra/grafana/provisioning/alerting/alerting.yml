@@ -1,0 +1,79 @@
+# Grafana Alerting Provisioning
+# Contact points, notification policies, and alert rules
+
+apiVersion: 1
+
+# Contact points - where to send alerts
+contactPoints:
+  - orgId: 1
+    name: ml-team-slack
+    receivers:
+      - uid: slack-ml-team
+        type: slack
+        settings:
+          url: ${SLACK_WEBHOOK_URL}
+          recipient: "#ml-alerts"
+          username: EvoGuard ML Monitor
+          icon_emoji: ":robot_face:"
+          mentionChannel: here
+        disableResolveMessage: false
+
+  - orgId: 1
+    name: critical-alerts
+    receivers:
+      - uid: slack-critical
+        type: slack
+        settings:
+          url: ${SLACK_WEBHOOK_URL}
+          recipient: "#ml-alerts-critical"
+          username: EvoGuard Critical Alert
+          icon_emoji: ":rotating_light:"
+          mentionChannel: channel
+        disableResolveMessage: false
+
+  - orgId: 1
+    name: email-digest
+    receivers:
+      - uid: email-ml-team
+        type: email
+        settings:
+          addresses: ml-team@example.com
+          singleEmail: true
+        disableResolveMessage: true
+
+# Notification policies - routing rules
+policies:
+  - orgId: 1
+    receiver: ml-team-slack
+    group_by:
+      - alertname
+      - model
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 4h
+    routes:
+      # Critical severity - immediate notification
+      - receiver: critical-alerts
+        object_matchers:
+          - ["severity", "=", "critical"]
+        group_wait: 10s
+        repeat_interval: 1h
+        continue: true
+
+      # Info severity - email only
+      - receiver: email-digest
+        object_matchers:
+          - ["severity", "=", "info"]
+        group_wait: 5m
+        repeat_interval: 24h
+
+# Mute timings - when to suppress alerts
+muteTimes:
+  - orgId: 1
+    name: maintenance-window
+    time_intervals:
+      - times:
+          - start_time: "02:00"
+            end_time: "04:00"
+        weekdays:
+          - "sunday"
