@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from ml_service.core.exceptions import DatabaseNotInitializedError
 from ml_service.feature_store.registry.models import Base
 
 # Global engine and session factory
@@ -40,7 +41,7 @@ def init_database(database_url: str) -> None:
 async def create_tables() -> None:
     """Create all tables in the database."""
     if _engine is None:
-        raise RuntimeError("Database not initialized. Call init_database() first.")
+        raise DatabaseNotInitializedError()
 
     async with _engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -49,7 +50,7 @@ async def create_tables() -> None:
 async def drop_tables() -> None:
     """Drop all tables in the database."""
     if _engine is None:
-        raise RuntimeError("Database not initialized. Call init_database() first.")
+        raise DatabaseNotInitializedError()
 
     async with _engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
@@ -68,7 +69,7 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
             feature = await repo.get_by_name("my_feature")
     """
     if _session_factory is None:
-        raise RuntimeError("Database not initialized. Call init_database() first.")
+        raise DatabaseNotInitializedError()
 
     session = _session_factory()
     try:
@@ -92,7 +93,7 @@ async def get_session_dependency() -> AsyncGenerator[AsyncSession, None]:
             ...
     """
     if _session_factory is None:
-        raise RuntimeError("Database not initialized. Call init_database() first.")
+        raise DatabaseNotInitializedError()
 
     session = _session_factory()
     try:

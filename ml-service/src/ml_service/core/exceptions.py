@@ -101,3 +101,21 @@ class ClassificationError(MLServiceException):
             message: Human-readable error message.
         """
         super().__init__(message)
+
+
+class DatabaseNotInitializedError(MLServiceException):
+    """Database is not initialized.
+
+    Raised when attempting to perform database operations
+    before the database has been initialized.
+    """
+
+    def __init__(
+        self, message: str = "Database not initialized. Call init_database() first."
+    ) -> None:
+        """Initialize the exception.
+
+        Args:
+            message: Human-readable error message.
+        """
+        super().__init__(message)

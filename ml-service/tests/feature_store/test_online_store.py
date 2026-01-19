@@ -290,7 +290,7 @@ class TestOnlineStoreConfig:
         assert config.password is None
         assert config.ssl is False
         assert config.key_prefix == "feature"
-        assert config.default_ttl_seconds == 86400
+        assert config.default_ttl_seconds is None  # Uses settings for default
 
     def test_custom_values(self) -> None:
         """Test custom configuration values."""

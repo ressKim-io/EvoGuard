@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from ml_service.core.exceptions import FeatureStoreConnectionError
 from ml_service.feature_store.offline import OfflineStoreReader
 from ml_service.feature_store.online import OnlineStore, OnlineStoreConfig
 
@@ -81,7 +82,7 @@ class FeatureSync:
             Dictionary with sync statistics (synced, skipped, errors).
         """
         if not self._connected:
-            raise RuntimeError("Not connected. Call connect() first.")
+            raise FeatureStoreConnectionError("Not connected. Call connect() first.")
 
         stats = {"synced": 0, "skipped": 0, "errors": 0}
 
@@ -164,7 +165,7 @@ class FeatureSync:
             Dictionary with sync statistics.
         """
         if not self._connected:
-            raise RuntimeError("Not connected. Call connect() first.")
+            raise FeatureStoreConnectionError("Not connected. Call connect() first.")
 
         stats = {"synced": 0, "skipped": 0, "errors": 0}
 
@@ -233,7 +234,7 @@ class FeatureSync:
             Number of entities refreshed or synced.
         """
         if not self._connected:
-            raise RuntimeError("Not connected. Call connect() first.")
+            raise FeatureStoreConnectionError("Not connected. Call connect() first.")
 
         refreshed = 0
         missing_ids = []

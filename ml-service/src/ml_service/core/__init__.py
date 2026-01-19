@@ -11,6 +11,7 @@ from ml_service.core.config import Settings, get_settings
 from ml_service.core.exceptions import (
     ClassificationError,
     ConfigurationError,
+    DatabaseNotInitializedError,
     FeatureStoreConnectionError,
     FeatureStoreError,
     MLServiceException,
@@ -27,6 +28,7 @@ from ml_service.core.protocols import (
 __all__ = [
     "ClassificationError",
     "ConfigurationError",
+    "DatabaseNotInitializedError",
     "FeatureStoreConnectionError",
     "FeatureStoreError",
     "FeatureStoreProtocol",

@@ -19,7 +19,7 @@ class OnlineStoreConfig(BaseModel):
     password: str | None = None
     ssl: bool = False
     key_prefix: str = "feature"
-    default_ttl_seconds: int = 86400  # 24 hours
+    default_ttl_seconds: int | None = None  # Uses settings if None
 
 
 def get_ttl_policies() -> dict[str, int]:
@@ -119,7 +119,12 @@ class OnlineStore:
             TTL in seconds.
         """
         ttl_policies = get_ttl_policies()
-        return ttl_policies.get(feature_group, self.config.default_ttl_seconds)
+        default_ttl = (
+            self.config.default_ttl_seconds
+            if self.config.default_ttl_seconds is not None
+            else get_settings().default_features_ttl_seconds
+        )
+        return ttl_policies.get(feature_group, default_ttl)
 
     async def set_features(
         self,
