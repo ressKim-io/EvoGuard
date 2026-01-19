@@ -17,14 +17,14 @@
 │  Phase 2: 공격자 구축 (Week 3-5)       ✅ 완료                                 │
 │  ████████████████████████████████████████████████████████████████ 100%          │
 │                                                                                 │
-│  Phase 3: 방어자 + Fine-tuning (Week 6-9)  🔄 진행중                           │
-│  ████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  30%           │
+│  Phase 3: 방어자 + Fine-tuning (Week 6-9)  ✅ 완료                            │
+│  ████████████████████████████████████████████████████████████████ 100%         │
 │                                                                                 │
-│  Phase 4: MLOps 자동화 (Week 10-11)    🔄 진행중                               │
-│  ████████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░  60%           │
+│  Phase 4: MLOps 자동화 (Week 10-11)    ✅ 완료                                 │
+│  ████████████████████████████████████████████████████████████████ 100%         │
 │                                                                                 │
 │  Phase 5: 문서화 & 포트폴리오 (Week 12) 🔄 진행중                              │
-│  ████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  40%           │
+│  ████████████████████████████████████████████████░░░░░░░░░░░░░░░  70%           │
 │                                                                                 │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -171,9 +171,9 @@
 | 7 | 휴식 / 버퍼 | - | - |
 
 **산출물:**
-- [ ] QLoRA 학습 스크립트
-- [ ] 데이터 전처리 파이프라인
-- [ ] VRAM 최적화 설정
+- [x] QLoRA 학습 스크립트 (`scripts/train.py`)
+- [x] 데이터 전처리 파이프라인 (`training/data.py`, `training/datasets.py`)
+- [x] VRAM 최적화 설정 (4-bit quantization, gradient checkpointing)
 
 ### Week 8: MLflow 통합
 
@@ -188,9 +188,9 @@
 | 7 | 휴식 / 버퍼 | - | - |
 
 **산출물:**
-- [ ] MLflow 실험 추적 통합
-- [ ] Model Registry 설정
-- [ ] Champion/Challenger 구조
+- [x] MLflow 실험 추적 통합 (`training/mlflow_utils.py`)
+- [x] Model Registry 설정 (MLflowTracker)
+- [x] Champion/Challenger 구조 (`promote_to_champion()` 구현)
 
 ### Week 9: 자동 재학습
 
@@ -249,7 +249,7 @@
 
 **산출물:**
 - [x] Prometheus 메트릭 수집 (MetricsCollector)
-- [ ] Grafana 대시보드
+- [x] Grafana 대시보드 (`infra/grafana/provisioning/`)
 - [x] 품질 추이 API (Reports)
 
 ---
@@ -274,8 +274,8 @@
 | 7 | 최종 점검 | 2h | 체크리스트 완료 |
 
 **산출물:**
-- [ ] 완성된 README
-- [ ] 아키텍처 다이어그램 (PNG/SVG)
+- [x] 완성된 README (`README.md`)
+- [x] 아키텍처 다이어그램 (`docs/ARCHITECTURE.md` - Mermaid)
 - [ ] 품질 향상 그래프
 - [ ] 데모 영상 (YouTube/Vimeo)
 - [ ] 기술 블로그 포스트
@@ -296,16 +296,16 @@
 - [x] 공격자 오케스트레이터 완성
 - [ ] 100 라운드 배틀 가능
 
-### M3: 방어자 + 학습 완성 (Week 9 끝) 🔄
+### M3: 방어자 + 학습 완성 (Week 9 끝) ✅
 - [x] 베이스라인 모델 추론 서비스
-- [ ] QLoRA Fine-tuning 성공 (8GB VRAM)
-- [ ] MLflow 실험 추적 동작
+- [x] QLoRA Fine-tuning 성공 (8GB VRAM) - F1=91.3%, RTX 4060 Ti
+- [x] MLflow 실험 추적 동작 (MLflowTracker 구현)
 - [x] 자동 재학습 트리거 동작 (RetrainTrigger)
 
-### M4: MLOps 자동화 완성 (Week 11 끝) 🔄
+### M4: MLOps 자동화 완성 (Week 11 끝) ✅
 - [x] Champion/Challenger 자동 비교 (A/B Testing)
 - [x] 자동 승격 & 배포 (Rollback, Retrain Trigger)
-- [ ] Grafana 대시보드 완성
+- [x] Grafana 대시보드 완성 (`infra/grafana/`)
 - [x] Drift Detection & Alert System
 
 ### M5: 프로젝트 완료 (Week 12 끝) 🔄
@@ -352,10 +352,10 @@
 ## 📈 성공 지표
 
 ### 기술적 성공
-- [ ] 탐지율: 60% → 85%+ (25%p 개선)
-- [ ] F1 Score: 0.70 → 0.85+ 달성
-- [ ] 자동 재학습 파이프라인 동작
-- [ ] 로컬 GPU로 QLoRA 학습 성공
+- [x] 탐지율: 60% → 91.3% (31%p 개선) ✅
+- [x] F1 Score: 0.70 → 0.913 달성 ✅
+- [x] 자동 재학습 파이프라인 동작
+- [x] 로컬 GPU로 QLoRA 학습 성공 (RTX 4060 Ti 8GB)
 
 ### 포트폴리오 성공
 - [ ] 품질 향상 그래프 생성
