@@ -119,6 +119,7 @@ data/*
 *.json
 !package.json
 !tsconfig.json
+!infra/grafana/provisioning/dashboards/json/*.json
 
 # Model files
 models/*

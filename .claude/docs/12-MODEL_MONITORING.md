@@ -798,10 +798,10 @@ infra/grafana/provisioning/dashboards/json/
 - [x] Alert Rules Engine - `alerts/rules.py`
 - [x] Prometheus Alert Rules - `infra/prometheus/rules/ml_alerts.yml`
 
-### Phase 4: 자동 대응
-- [ ] 재학습 자동 트리거
-- [ ] Champion 롤백 로직
-- [ ] 대시보드 구축
+### Phase 4: 자동 대응 ✅ 완료
+- [x] 재학습 자동 트리거 - `actions/retrain_trigger.py`
+- [x] Champion 롤백 로직 - `actions/rollback.py`
+- [x] ML 모니터링 대시보드 - `infra/grafana/provisioning/dashboards/json/ml-monitoring.json`
 
 ### Phase 5: 고도화
 - [ ] ADWIN 실시간 Drift 감지
@@ -810,7 +810,158 @@ infra/grafana/provisioning/dashboards/json/
 
 ---
 
-## 11. 참고 자료
+## 11. 자동 대응 모듈 상세
+
+### AutoRetrainTrigger
+
+Drift 메트릭 기반 자동 재학습 트리거:
+
+```python
+from ml_service.monitoring.actions import AutoRetrainTrigger
+
+trigger = AutoRetrainTrigger(
+    model_name="text_classifier",
+    data_drift_threshold=0.25,      # PSI 임계값
+    concept_drift_threshold=0.10,   # F1 drop 임계값
+    f1_critical_threshold=0.65,     # Critical F1 임계값
+    min_interval_hours=24,          # 최소 재학습 간격
+    max_retrains_per_day=3,         # 일일 최대 재학습 횟수
+)
+
+decision = trigger.evaluate({
+    "data_drift_psi": 0.30,
+    "f1_drop": 0.08,
+    "current_f1": 0.78,
+})
+
+if decision.should_retrain:
+    print(f"Retrain triggered: {decision.reasons}")
+    print(f"Priority: {decision.priority}")
+```
+
+### ScheduledRetrainTrigger
+
+주기적 재학습 스케줄링:
+
+```python
+from ml_service.monitoring.actions import ScheduledRetrainTrigger
+
+trigger = ScheduledRetrainTrigger(
+    model_name="text_classifier",
+    interval_hours=168,  # 주 1회
+)
+
+if trigger.is_due():
+    decision = trigger.evaluate()
+    # Execute retrain...
+    trigger.record_retrain()
+```
+
+### RetrainOrchestrator
+
+다중 트리거 통합 관리:
+
+```python
+from ml_service.monitoring.actions import (
+    RetrainOrchestrator,
+    AutoRetrainTrigger,
+    ScheduledRetrainTrigger,
+    MockRetrainExecutor,
+)
+
+orchestrator = RetrainOrchestrator(
+    model_name="text_classifier",
+    executor=MockRetrainExecutor(),
+)
+
+orchestrator.add_drift_trigger(AutoRetrainTrigger("text_classifier"))
+orchestrator.add_scheduled_trigger(ScheduledRetrainTrigger("text_classifier"))
+
+decision, job = await orchestrator.evaluate_and_execute(metrics)
+```
+
+### ChampionRollback
+
+모델 버전 롤백 관리:
+
+```python
+from ml_service.monitoring.actions import (
+    ChampionRollback,
+    InMemoryModelRegistry,
+    RollbackReason,
+)
+
+registry = InMemoryModelRegistry()
+# ... register versions ...
+
+rollback = ChampionRollback(
+    model_name="text_classifier",
+    registry=registry,
+    rollback_cooldown_hours=1,
+)
+
+result = await rollback.rollback_to_previous(
+    reason=RollbackReason.PERFORMANCE_DEGRADATION,
+    metrics_before={"f1_score": 0.6},
+)
+
+if result.success:
+    print(f"Rolled back: {result.from_version} -> {result.to_version}")
+```
+
+### AutoRollbackMonitor
+
+자동 롤백 모니터링:
+
+```python
+from ml_service.monitoring.actions import AutoRollbackMonitor
+
+monitor = AutoRollbackMonitor(
+    rollback_manager=rollback,
+    f1_threshold=0.65,           # F1 임계값
+    error_rate_threshold=0.1,    # 에러율 임계값
+    latency_threshold_ms=500,    # 지연 임계값
+    consecutive_failures=3,      # 연속 실패 횟수
+)
+
+health, rollback_result = await monitor.check_and_rollback({
+    "f1_score": 0.5,
+    "error_rate": 0.15,
+    "latency_p99_ms": 600,
+})
+
+if rollback_result and rollback_result.success:
+    print(f"Auto rollback: {rollback_result.reason}")
+```
+
+---
+
+## 12. Grafana 대시보드
+
+### ML Model Monitoring Dashboard
+
+대시보드 위치: `infra/grafana/provisioning/dashboards/json/ml-monitoring.json`
+
+#### 패널 구성
+
+| 섹션 | 패널 | 설명 |
+|------|------|------|
+| **Model Performance** | F1, Accuracy, Precision, Recall Stats | 현재 메트릭 값 |
+| | Performance Over Time | 시계열 그래프 |
+| | Prediction Latency | p50, p95, p99 지연 |
+| **Drift Detection** | PSI, Concept Drift Stats | 현재 Drift 점수 |
+| | Drift Scores Over Time | Drift 트렌드 |
+| | Feature Drift by Feature | Feature별 Drift |
+| **Prediction Quality** | Distribution by Class | 클래스별 분포 |
+| | Prediction Rate | 예측 속도 |
+| | Confidence Metrics | 신뢰도 모니터링 |
+| **Automated Actions** | Retrains, Rollbacks, Alerts | 24시간 이벤트 카운트 |
+| | Actions Timeline | 시간대별 이벤트 |
+| **System Health** | Memory, CPU Usage | 리소스 모니터링 |
+
+---
+
+## 13. 참고 자료
 
 ### 외부 리소스
 - [Evidently AI - ML Monitoring](https://www.evidentlyai.com/)
@@ -829,3 +980,4 @@ infra/grafana/provisioning/dashboards/json/
 *Phase 1 MVP 구현 완료: 2026-01-19*
 *Phase 2 Drift Detection 구현 완료: 2026-01-19*
 *Phase 3 Alert System 구현 완료: 2026-01-19*
+*Phase 4 Automated Actions 구현 완료: 2026-01-19*
