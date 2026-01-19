@@ -1,0 +1,131 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ml-service.fullname" . }}
+  labels:
+    {{- include "ml-service.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "ml-service.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "ml-service.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "ml-service.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.initContainers.enabled }}
+      initContainers:
+        - name: download-model
+          image: {{ .Values.initContainers.image }}
+          command:
+            - sh
+            - -c
+            - |
+              if [ ! -f /models/model.bin ]; then
+                curl -L -o /models/model.bin "{{ .Values.initContainers.modelUrl }}"
+              fi
+          volumeMounts:
+            - name: model-storage
+              mountPath: /models
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          {{- with .Values.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            limits:
+              cpu: {{ .Values.resources.limits.cpu }}
+              memory: {{ .Values.resources.limits.memory }}
+              {{- if .Values.gpu.enabled }}
+              {{ .Values.gpu.resourceName }}: {{ .Values.gpu.count }}
+              {{- end }}
+            requests:
+              cpu: {{ .Values.resources.requests.cpu }}
+              memory: {{ .Values.resources.requests.memory }}
+              {{- if .Values.gpu.enabled }}
+              {{ .Values.gpu.resourceName }}: {{ .Values.gpu.count }}
+              {{- end }}
+          env:
+            {{- with .Values.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "ml-service.fullname" . }}-config
+                  key: redis.host
+            - name: REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "ml-service.fullname" . }}-config
+                  key: redis.port
+            - name: MODEL_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "ml-service.fullname" . }}-config
+                  key: model.path
+            - name: FEATURE_STORE_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "ml-service.fullname" . }}-config
+                  key: feature-store.enabled
+            - name: MONITORING_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "ml-service.fullname" . }}-config
+                  key: monitoring.enabled
+          volumeMounts:
+            {{- if .Values.persistence.enabled }}
+            - name: model-storage
+              mountPath: {{ .Values.persistence.mountPath }}
+            {{- end }}
+      volumes:
+        {{- if .Values.persistence.enabled }}
+        - name: model-storage
+          persistentVolumeClaim:
+            claimName: {{ include "ml-service.fullname" . }}-models
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

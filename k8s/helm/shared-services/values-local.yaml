@@ -1,0 +1,47 @@
+# Local development values for shared-services
+
+postgresql:
+  enabled: true
+  image:
+    tag: "latest"
+  auth:
+    postgresPassword: "local-postgres"
+    username: "evoguard"
+    password: "local-password"
+    database: "evoguard"
+  primary:
+    persistence:
+      enabled: true
+      size: 1Gi
+      storageClass: "standard"
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 50m
+        memory: 128Mi
+  metrics:
+    enabled: false  # Disable for local
+
+redis:
+  enabled: true
+  image:
+    tag: "latest"
+  architecture: standalone
+  auth:
+    enabled: false
+  master:
+    persistence:
+      enabled: true
+      size: 500Mi
+      storageClass: "standard"
+    resources:
+      limits:
+        cpu: 100m
+        memory: 128Mi
+      requests:
+        cpu: 25m
+        memory: 64Mi
+  metrics:
+    enabled: false  # Disable for local

@@ -1,0 +1,65 @@
+# Local development values for ml-service (CPU only - no GPU)
+replicaCount: 1
+
+image:
+  repository: evoguard/ml-service
+  pullPolicy: Never
+  tag: "local"
+
+# GPU disabled
+gpu:
+  enabled: false
+
+autoscaling:
+  enabled: false
+
+# Lower resources for CPU-only
+resources:
+  limits:
+    cpu: 2000m
+    memory: 4Gi
+  requests:
+    cpu: 500m
+    memory: 2Gi
+
+ingress:
+  enabled: true
+  className: "nginx"
+  hosts:
+    - host: ml.evoguard.local
+      paths:
+        - path: /
+          pathType: Prefix
+
+config:
+  redis:
+    host: shared-services-redis-master
+    port: 6379
+  model:
+    path: /app/models
+    name: bert-toxic-classifier
+  featureStore:
+    enabled: true
+    ttlSeconds: 3600
+  monitoring:
+    enabled: true
+    lowConfidenceThreshold: 0.7
+
+persistence:
+  enabled: true
+  storageClass: "standard"
+  size: 5Gi
+
+# Even faster probes for CPU (slower inference)
+startupProbe:
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  failureThreshold: 60
+
+livenessProbe:
+  initialDelaySeconds: 60
+  periodSeconds: 30
+
+readinessProbe:
+  initialDelaySeconds: 30
+  periodSeconds: 10

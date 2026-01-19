@@ -1,0 +1,55 @@
+# Shared services configuration
+
+# PostgreSQL (Bitnami chart)
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: "evoguard-postgres"
+    username: "evoguard"
+    password: "evoguard-password"
+    database: "evoguard"
+  primary:
+    persistence:
+      enabled: true
+      size: 8Gi
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 256Mi
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+# Redis (Bitnami chart)
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: false
+  master:
+    persistence:
+      enabled: true
+      size: 2Gi
+    resources:
+      limits:
+        cpu: 250m
+        memory: 256Mi
+      requests:
+        cpu: 50m
+        memory: 128Mi
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+# Prometheus (optional - can use kube-prometheus-stack instead)
+prometheus:
+  enabled: false
+
+# Grafana (optional - can use kube-prometheus-stack instead)
+grafana:
+  enabled: false

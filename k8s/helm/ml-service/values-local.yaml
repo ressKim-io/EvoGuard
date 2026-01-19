@@ -1,0 +1,71 @@
+# Local development values for ml-service (with GPU)
+replicaCount: 1
+
+image:
+  repository: evoguard/ml-service
+  pullPolicy: Never  # Use local image
+  tag: "local"
+
+# GPU enabled for local
+gpu:
+  enabled: true
+  count: 1
+  resourceName: "nvidia.com/gpu"
+
+# Autoscaling disabled for GPU workloads
+autoscaling:
+  enabled: false
+
+# Resources adjusted for local GPU
+resources:
+  limits:
+    cpu: 1000m
+    memory: 4Gi
+  requests:
+    cpu: 250m
+    memory: 2Gi
+
+# Local ingress
+ingress:
+  enabled: true
+  className: "nginx"
+  hosts:
+    - host: ml.evoguard.local
+      paths:
+        - path: /
+          pathType: Prefix
+
+# Local service configuration
+config:
+  redis:
+    host: shared-services-redis-master
+    port: 6379
+  model:
+    path: /app/models
+    name: bert-toxic-classifier
+  featureStore:
+    enabled: true
+    ttlSeconds: 3600
+  monitoring:
+    enabled: true
+    lowConfidenceThreshold: 0.7
+
+# Persistence for models
+persistence:
+  enabled: true
+  storageClass: "standard"
+  size: 5Gi
+
+# Faster probes for local dev
+startupProbe:
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  failureThreshold: 60
+
+livenessProbe:
+  initialDelaySeconds: 30
+  periodSeconds: 15
+
+readinessProbe:
+  initialDelaySeconds: 15
+  periodSeconds: 5

@@ -1,0 +1,157 @@
+# Default values for ml-service
+replicaCount: 1
+
+image:
+  repository: ghcr.io/evoguard/ml-service
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8000"
+  prometheus.io/path: "/metrics"
+
+podSecurityContext: {}
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 8000
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations: {}
+  hosts:
+    - host: ml.evoguard.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# GPU Configuration
+gpu:
+  enabled: true
+  count: 1
+  # NVIDIA GPU resource name
+  resourceName: "nvidia.com/gpu"
+
+# Resources - adjusted for ML inference
+resources:
+  limits:
+    cpu: 2000m
+    memory: 4Gi
+    # GPU is added dynamically if enabled
+  requests:
+    cpu: 500m
+    memory: 2Gi
+
+# No autoscaling for GPU workloads (expensive)
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70
+
+# GPU node selection
+nodeSelector: {}
+  # For GPU nodes, uncomment:
+  # accelerator: nvidia-gpu
+
+# GPU tolerations
+tolerations: []
+  # For GPU nodes, add:
+  # - key: "nvidia.com/gpu"
+  #   operator: "Exists"
+  #   effect: "NoSchedule"
+
+affinity: {}
+
+# Environment variables
+env:
+  - name: PORT
+    value: "8000"
+  - name: LOG_LEVEL
+    value: "info"
+  - name: WORKERS
+    value: "1"
+  # PyTorch settings
+  - name: PYTORCH_CUDA_ALLOC_CONF
+    value: "max_split_size_mb:512"
+  - name: CUDA_VISIBLE_DEVICES
+    value: "0"
+
+# Config from ConfigMap
+config:
+  redis:
+    host: redis
+    port: 6379
+  model:
+    path: /app/models
+    name: bert-toxic-classifier
+  featureStore:
+    enabled: true
+    ttlSeconds: 86400
+  monitoring:
+    enabled: true
+    lowConfidenceThreshold: 0.7
+
+# Secrets reference
+secrets:
+  modelRegistrySecret: ml-service-registry-secret
+  modelRegistryKey: token
+
+# Health checks - longer timeouts for model loading
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 60
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Startup probe for slow model loading
+startupProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 30  # 5 minutes max startup
+
+# Model storage
+persistence:
+  enabled: true
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 10Gi
+  mountPath: /app/models
+
+# Init container for model download
+initContainers:
+  enabled: false
+  image: curlimages/curl:latest
+  modelUrl: ""

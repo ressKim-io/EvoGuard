@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ml-service.fullname" . }}-config
+  labels:
+    {{- include "ml-service.labels" . | nindent 4 }}
+data:
+  redis.host: {{ .Values.config.redis.host | quote }}
+  redis.port: {{ .Values.config.redis.port | quote }}
+  model.path: {{ .Values.config.model.path | quote }}
+  model.name: {{ .Values.config.model.name | quote }}
+  feature-store.enabled: {{ .Values.config.featureStore.enabled | quote }}
+  feature-store.ttl-seconds: {{ .Values.config.featureStore.ttlSeconds | quote }}
+  monitoring.enabled: {{ .Values.config.monitoring.enabled | quote }}
+  monitoring.low-confidence-threshold: {{ .Values.config.monitoring.lowConfidenceThreshold | quote }}

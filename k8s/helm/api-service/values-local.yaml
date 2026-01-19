@@ -1,0 +1,48 @@
+# Local development values for api-service
+replicaCount: 1
+
+image:
+  repository: evoguard/api-service
+  pullPolicy: Never  # Use local image
+  tag: "local"
+
+# Disable autoscaling for local dev
+autoscaling:
+  enabled: false
+
+# Reduced resources for local
+resources:
+  limits:
+    cpu: 200m
+    memory: 128Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+# Local ingress
+ingress:
+  enabled: true
+  className: "nginx"
+  hosts:
+    - host: api.evoguard.local
+      paths:
+        - path: /
+          pathType: Prefix
+
+# Local service configuration
+config:
+  database:
+    host: shared-services-postgresql
+    port: 5432
+    name: evoguard
+    sslmode: disable
+  redis:
+    host: shared-services-redis-master
+    port: 6379
+  mlService:
+    url: http://ml-service:8000
+
+# Use local secret
+secrets:
+  databasePasswordSecret: api-service-db-secret
+  databasePasswordKey: password

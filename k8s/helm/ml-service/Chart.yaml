@@ -1,0 +1,14 @@
+apiVersion: v2
+name: ml-service
+description: EvoGuard ML Service - Inference and Feature Store
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - evoguard
+  - ml
+  - inference
+  - pytorch
+  - gpu
+maintainers:
+  - name: EvoGuard Team

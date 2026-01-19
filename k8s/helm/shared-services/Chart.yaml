@@ -1,0 +1,23 @@
+apiVersion: v2
+name: shared-services
+description: EvoGuard Shared Services - PostgreSQL, Redis, Monitoring
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - evoguard
+  - postgresql
+  - redis
+  - monitoring
+maintainers:
+  - name: EvoGuard Team
+
+dependencies:
+  - name: postgresql
+    version: "14.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: postgresql.enabled
+  - name: redis
+    version: "18.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: redis.enabled

@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "api-service.fullname" . }}
+  labels:
+    {{- include "api-service.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "api-service.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "api-service.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "api-service.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          env:
+            {{- with .Values.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            # Database config (EVOGUARD_ prefix for viper)
+            - name: EVOGUARD_DATABASE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "api-service.fullname" . }}-config
+                  key: database.host
+            - name: EVOGUARD_DATABASE_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "api-service.fullname" . }}-config
+                  key: database.port
+            - name: EVOGUARD_DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.databasePasswordSecret }}
+                  key: username
+            - name: EVOGUARD_DATABASE_DBNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "api-service.fullname" . }}-config
+                  key: database.name
+            - name: EVOGUARD_DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.databasePasswordSecret }}
+                  key: {{ .Values.secrets.databasePasswordKey }}
+            - name: EVOGUARD_DATABASE_SSLMODE
+              value: "disable"
+            # Redis config
+            - name: EVOGUARD_REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "api-service.fullname" . }}-config
+                  key: redis.host
+            - name: EVOGUARD_REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "api-service.fullname" . }}-config
+                  key: redis.port
+            # ML Service config
+            - name: EVOGUARD_MLSERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "api-service.fullname" . }}-config
+                  key: ml-service.url
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
