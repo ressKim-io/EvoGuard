@@ -26,6 +26,8 @@ try:
         TrainingArguments,
     )
 
+    from ml_service.training.mlflow_utils import MLflowTracker
+
     HAS_TRAINING_DEPS = True
 except ImportError:
     pass
@@ -33,8 +35,6 @@ except ImportError:
 if TYPE_CHECKING:
     from datasets import DatasetDict
     from transformers import Trainer
-
-    from ml_service.training.mlflow_utils import MLflowTracker
 
 
 class QLoRATrainer:
