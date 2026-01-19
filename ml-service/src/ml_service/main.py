@@ -13,6 +13,7 @@ from ml_service.core.config import get_settings
 from ml_service.core.logging import get_logger, setup_logging
 from ml_service.feature_store.api import router as feature_store_router
 from ml_service.feature_store.registry import close_database, create_tables, init_database
+from ml_service.pipeline.api import router as pipeline_router
 from ml_service.services.inference import get_inference_service
 
 # Initialize logging
@@ -83,6 +84,7 @@ def create_app() -> FastAPI:
     # Include API routes
     app.include_router(router)
     app.include_router(feature_store_router)
+    app.include_router(pipeline_router)
 
     # Prometheus metrics endpoint
     @app.get("/metrics", include_in_schema=False)

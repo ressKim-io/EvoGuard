@@ -1,0 +1,63 @@
+# Adversarial MLOps Pipeline Configuration
+# =========================================
+# This configuration controls the automated pipeline for:
+# - Running adversarial attacks
+# - Evaluating model quality
+# - Triggering retraining when needed
+# - Promoting models through Champion/Challenger evaluation
+
+adversarial_pipeline:
+  # Attack Configuration
+  attack:
+    corpus_path: "data/toxic_corpus.csv"
+    num_variants: 5
+    batch_size: 100
+    include_llm_strategies: false
+    text_column: "text"
+    label_column: "label"
+
+  # Quality Gate Thresholds (핵심 설정!)
+  quality_gate:
+    max_evasion_rate: 0.15      # 15% 초과 시 재학습
+    min_f1_score: 0.85          # 85% 미만 시 재학습
+    min_f1_drop: 0.05           # 5%p 하락 시 재학습
+    min_precision: 0.80
+    min_recall: 0.80
+
+  # Schedule (수동 실행 모드)
+  schedule:
+    enabled: false              # 자동 스케줄 비활성화
+    manual_trigger_only: true   # 수동 트리거만 사용
+    interval_hours: 4
+
+  # Retraining Configuration
+  retrain:
+    min_failed_samples: 50      # 최소 50개 실패 샘플 필요
+    augmentation_multiplier: 3  # 샘플당 3개 변형 생성
+    merge_with_original: true
+    max_augmented_samples: 5000
+
+  # Champion/Challenger Evaluation
+  evaluation:
+    traffic_ratio: 0.1          # 10% A/B 테스트
+    min_samples: 1000           # 최소 1000개 후 판단
+    significance_level: 0.05    # p < 0.05
+    min_improvement: 0.02       # 2% 이상 개선 필요
+    max_evaluation_hours: 48
+
+  # Storage
+  storage:
+    failed_samples_dir: "data/failed_samples"
+    augmented_data_dir: "data/augmented"
+    model_output_dir: "models/pipeline"
+    history_file: "data/pipeline_history.json"
+
+  # MLflow
+  mlflow:
+    tracking_uri: "http://localhost:5000"
+    experiment_name: "adversarial-pipeline"
+    model_name: "evoguard-toxic-classifier"
+
+  # Model
+  model_name: "bert-base-uncased"
+  verbose: true
