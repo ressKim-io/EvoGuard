@@ -786,10 +786,10 @@ infra/grafana/provisioning/dashboards/json/
 - [x] 예측 로깅 구현 (`prediction/logger.py`)
 - [x] 신뢰도 분포 모니터링 (`prediction/confidence.py`)
 
-### Phase 2: Drift Detection
-- [ ] Data Drift (PSI, KS Test)
-- [ ] Concept Drift (성능 기반)
-- [ ] Feature Drift (Feature Store 연동)
+### Phase 2: Drift Detection ✅ 완료
+- [x] Data Drift (PSI, KS Test) - `drift/data_drift.py`
+- [x] Concept Drift (성능 기반, ADWIN) - `drift/concept_drift.py`
+- [x] Feature Drift (Feature Store 연동) - `drift/feature_drift.py`
 
 ### Phase 3: 알림 시스템
 - [ ] Grafana Alert Rules 설정
@@ -825,3 +825,4 @@ infra/grafana/provisioning/dashboards/json/
 
 *설계 완료: 2026-01-19*
 *Phase 1 MVP 구현 완료: 2026-01-19*
+*Phase 2 Drift Detection 구현 완료: 2026-01-19*
