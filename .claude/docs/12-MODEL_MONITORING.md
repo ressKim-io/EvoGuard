@@ -749,6 +749,12 @@ ml-service/src/ml_service/monitoring/
 │   ├── __init__.py
 │   ├── retrain_trigger.py      # 재학습 트리거
 │   └── rollback.py             # Champion 롤백
+├── experimental/                # A/B 테스트 (Phase 5)
+│   ├── __init__.py
+│   └── ab_testing.py           # A/B 테스트 엔진
+├── reports/                     # 리포트 생성 (Phase 5)
+│   ├── __init__.py
+│   └── generator.py            # 리포트 생성기
 └── api/                         # API 라우터
     ├── __init__.py
     └── routes.py               # 모니터링 API
@@ -803,10 +809,10 @@ infra/grafana/provisioning/dashboards/json/
 - [x] Champion 롤백 로직 - `actions/rollback.py`
 - [x] ML 모니터링 대시보드 - `infra/grafana/provisioning/dashboards/json/ml-monitoring.json`
 
-### Phase 5: 고도화
-- [ ] ADWIN 실시간 Drift 감지
-- [ ] A/B 테스트 연동
-- [ ] 리포트 자동 생성
+### Phase 5: 고도화 ✅ 완료
+- [x] ADWIN 실시간 Drift 감지 - `drift/concept_drift.py` (Phase 2에서 구현)
+- [x] A/B 테스트 연동 - `experimental/ab_testing.py`
+- [x] 리포트 자동 생성 - `reports/generator.py`
 
 ---
 
@@ -961,7 +967,189 @@ if rollback_result and rollback_result.success:
 
 ---
 
-## 13. 참고 자료
+## 13. A/B 테스트 모듈 (Phase 5)
+
+### 모듈 구조
+
+```
+ml-service/src/ml_service/monitoring/experimental/
+├── __init__.py
+└── ab_testing.py          # A/B 테스트 엔진
+```
+
+### TrafficSplitter
+
+일관된 해싱을 사용한 트래픽 분배:
+
+```python
+from ml_service.monitoring.experimental import TrafficSplitter, VariantAssignment
+
+splitter = TrafficSplitter(challenger_ratio=0.1)  # 10% to challenger
+variant = splitter.assign("user_123")  # 동일 사용자는 항상 동일 변형
+```
+
+### ABExperiment
+
+실험 생성 및 관리:
+
+```python
+from ml_service.monitoring.experimental import ABExperiment, VariantAssignment
+
+experiment = ABExperiment(
+    experiment_id="exp_001",
+    challenger_ratio=0.1,
+    min_samples_per_variant=1000,
+    significance_level=0.05,
+    auto_stop=True,
+)
+
+experiment.start()
+
+# 트래픽 할당
+variant = experiment.assign_variant("user_123")
+
+# 예측 결과 기록
+experiment.record_prediction(
+    variant=variant,
+    prediction=1,
+    confidence=0.95,
+    latency_ms=50.0,
+    actual_label=1,  # 피드백 시
+)
+
+# 결과 확인
+result = experiment.get_result()
+print(f"Recommendation: {result.recommendation}")
+```
+
+### StatisticalSignificance
+
+통계적 유의성 검정:
+
+```python
+from ml_service.monitoring.experimental import StatisticalSignificance
+
+# Two-proportion z-test
+result = StatisticalSignificance.z_test_proportions(
+    p1=0.80,   # Champion accuracy
+    n1=5000,   # Champion samples
+    p2=0.85,   # Challenger accuracy
+    n2=500,    # Challenger samples
+    alpha=0.05,
+)
+
+if result.is_significant:
+    print(f"Significant difference: p={result.p_value:.4f}")
+    if result.challenger_better:
+        print("Challenger is better!")
+
+# 최소 샘플 크기 계산
+n = StatisticalSignificance.minimum_sample_size(
+    baseline_rate=0.80,
+    minimum_detectable_effect=0.05,
+)
+```
+
+### ExperimentManager
+
+다중 실험 관리:
+
+```python
+from ml_service.monitoring.experimental import ExperimentManager
+
+manager = ExperimentManager()
+
+# 실험 생성
+exp = manager.create_experiment(
+    experiment_id="new_model_test",
+    challenger_ratio=0.1,
+    min_samples_per_variant=1000,
+)
+
+manager.start_experiment("new_model_test")
+
+# 실행 중인 실험 확인
+running = manager.get_running_experiments()
+
+# 모든 결과 조회
+all_results = manager.get_all_results()
+```
+
+---
+
+## 14. 리포트 자동 생성 (Phase 5)
+
+### 모듈 구조
+
+```
+ml-service/src/ml_service/monitoring/reports/
+├── __init__.py
+└── generator.py          # 리포트 생성기
+```
+
+### 리포트 유형
+
+| 유형 | 클래스 | 설명 |
+|------|--------|------|
+| Performance | PerformanceReportGenerator | 모델 성능 요약 |
+| Drift | DriftReportGenerator | Drift 감지 리포트 |
+| Experiment | ExperimentReportGenerator | A/B 테스트 결과 |
+| Action | ActionReportGenerator | 자동 대응 이력 |
+| Comprehensive | MonitoringReportGenerator | 통합 리포트 |
+
+### 출력 형식
+
+- **Markdown** - 문서화용
+- **HTML** - 웹 리포트
+- **JSON** - API 응답
+- **Text** - 간단한 텍스트
+
+### 사용 예시
+
+```python
+from ml_service.monitoring.reports import (
+    MonitoringReportGenerator,
+    PerformanceReportData,
+    TimeRange,
+    ReportFormat,
+)
+
+generator = MonitoringReportGenerator()
+
+# 성능 리포트 생성
+perf_data = PerformanceReportData(
+    model_name="text_classifier",
+    model_version="v2.0",
+    time_range=TimeRange.last_hours(24),
+    total_predictions=50000,
+    accuracy=0.92,
+    precision=0.90,
+    recall=0.88,
+    f1_score=0.89,
+    latency_summary=MetricSummary.from_values("latency", latencies),
+    label_distribution={"spam": 15000, "ham": 35000},
+)
+
+report = generator.generate_performance_report(perf_data, ReportFormat.MARKDOWN)
+print(report)
+```
+
+### 통합 리포트 생성
+
+```python
+# 모든 섹션 포함 통합 리포트
+report = generator.generate_comprehensive_report(
+    performance_data=perf_data,
+    drift_data=drift_data,
+    experiment_data=exp_data,
+    action_data=action_data,
+    format_type=ReportFormat.HTML,
+)
+```
+
+---
+
+## 15. 참고 자료
 
 ### 외부 리소스
 - [Evidently AI - ML Monitoring](https://www.evidentlyai.com/)
@@ -981,3 +1169,4 @@ if rollback_result and rollback_result.success:
 *Phase 2 Drift Detection 구현 완료: 2026-01-19*
 *Phase 3 Alert System 구현 완료: 2026-01-19*
 *Phase 4 Automated Actions 구현 완료: 2026-01-19*
+*Phase 5 A/B Testing & Reports 구현 완료: 2026-01-19*

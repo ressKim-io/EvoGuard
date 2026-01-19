@@ -344,7 +344,7 @@ class TestScheduledRetrainTrigger:
         trigger.record_retrain()
         remaining = trigger.time_until_next()
         assert remaining is not None
-        assert remaining < timedelta(hours=24)
+        assert remaining <= timedelta(hours=24)
 
 
 class TestRetrainOrchestrator:

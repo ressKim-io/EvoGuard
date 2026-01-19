@@ -6,7 +6,8 @@ This module provides tools for monitoring ML model performance in production:
 - Confidence distribution monitoring
 - Data and Concept Drift detection (Phase 2)
 - Alert system (Phase 3)
-- (Phase 4) Automated actions
+- Automated actions (Phase 4)
+- A/B testing and report generation (Phase 5)
 """
 
 from ml_service.monitoring.alerts import (

@@ -408,11 +408,15 @@ class TestChampionRollback:
         registry: InMemoryModelRegistry,
     ) -> None:
         """Test getting rollback history."""
+        import asyncio
+
         v1 = ModelVersion(version="v1.0.0", model_name="test_model")
         v2 = ModelVersion(version="v2.0.0", model_name="test_model")
         registry.add_version(v1)
         registry.add_version(v2)
         await registry.set_champion("test_model", "v1.0.0")
+        # Small delay to ensure different promoted_at timestamps
+        await asyncio.sleep(0.01)
         await registry.set_champion("test_model", "v2.0.0")
 
         await rollback_handler.rollback_to_previous(

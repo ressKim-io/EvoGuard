@@ -1,9 +1,7 @@
 """Tests for data drift detection module."""
 
-import pytest
 
 from ml_service.monitoring.drift.data_drift import (
-    PSIResult,
     StreamingDataDriftMonitor,
     TextDataDriftMonitor,
     calculate_psi,
@@ -261,7 +259,7 @@ class TestStreamingDataDriftMonitor:
 
         # Add current data
         for i in range(20, 35):
-            result = monitor.add_current(float(i))
+            monitor.add_current(float(i))
 
         # Should have triggered at least one check
         assert monitor.get_last_result() is not None

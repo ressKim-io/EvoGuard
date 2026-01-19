@@ -7,7 +7,6 @@ import pytest
 from ml_service.monitoring.drift.concept_drift import (
     ADWINDriftDetector,
     ConceptDriftMonitor,
-    ConceptDriftResult,
     MultiMetricDriftDetector,
     PerformanceMetrics,
 )
@@ -168,7 +167,7 @@ class TestADWINDriftDetector:
 
         # Add stable values
         for _ in range(100):
-            drift = detector.update(0.5)
+            detector.update(0.5)
 
         # Should not detect drift for constant values
         assert detector.width > 0
@@ -182,10 +181,8 @@ class TestADWINDriftDetector:
             detector.update(0.2)
 
         # Shift to a different distribution
-        drift_detected = False
         for _ in range(50):
             if detector.update(0.8):
-                drift_detected = True
                 break
 
         # May or may not detect drift depending on the delta
@@ -300,7 +297,7 @@ class TestMultiMetricDriftDetector:
         """Should reset specific metric."""
         detector = MultiMetricDriftDetector(metrics=["accuracy", "f1"])
 
-        for i in range(20):
+        for _i in range(20):
             detector.update({"accuracy": 0.85, "f1": 0.80})
 
         detector.reset("accuracy")
@@ -313,7 +310,7 @@ class TestMultiMetricDriftDetector:
         """Should reset all metrics."""
         detector = MultiMetricDriftDetector(metrics=["accuracy", "f1"])
 
-        for i in range(20):
+        for _i in range(20):
             detector.update({"accuracy": 0.85, "f1": 0.80})
 
         detector.reset()
