@@ -2,9 +2,17 @@
 """QLoRA training script for toxic content classification.
 
 Usage:
+    # From local file
     python scripts/train.py --data data/train.csv
-    python scripts/train.py --data data/train.csv --model distilbert-base-uncased
-    python scripts/train.py --data data/train.csv --epochs 5 --batch-size 8
+
+    # From HuggingFace dataset
+    python scripts/train.py --dataset jigsaw --max-samples 10000
+
+    # Quick test with sample data
+    python scripts/train.py --sample --max-samples 100
+
+    # Full training
+    python scripts/train.py --dataset jigsaw --epochs 3 --batch-size 4
 """
 
 import argparse
@@ -15,7 +23,14 @@ from pathlib import Path
 # Add src to path for local development
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from ml_service.training import DataConfig, DataProcessor, QLoRATrainer, TrainingConfig
+from ml_service.training import (
+    DataConfig,
+    DataProcessor,
+    JigsawDatasetLoader,
+    QLoRATrainer,
+    TrainingConfig,
+    get_sample_data,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -31,12 +46,23 @@ def parse_args() -> argparse.Namespace:
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
-    # Data arguments
-    parser.add_argument(
+    # Data source (mutually exclusive)
+    data_group = parser.add_mutually_exclusive_group(required=True)
+    data_group.add_argument(
         "--data",
         type=Path,
-        required=True,
         help="Path to training data (CSV, JSON, or Parquet)",
+    )
+    data_group.add_argument(
+        "--dataset",
+        type=str,
+        choices=["jigsaw", "jigsaw_balanced", "toxic_tweets"],
+        help="HuggingFace dataset to use (jigsaw: Arsive/toxicity_classification_jigsaw)",
+    )
+    data_group.add_argument(
+        "--sample",
+        action="store_true",
+        help="Use synthetic sample data for testing",
     )
     parser.add_argument(
         "--text-column",
@@ -174,11 +200,6 @@ def main() -> None:
     logger.info("QLoRA Training Script")
     logger.info("=" * 60)
 
-    # Validate data file
-    if not args.data.exists():
-        logger.error(f"Data file not found: {args.data}")
-        sys.exit(1)
-
     # Create configurations
     from ml_service.training.config import LoRAConfig
 
@@ -201,23 +222,61 @@ def main() -> None:
         ),
     )
 
-    data_config = DataConfig(
-        text_column=args.text_column,
-        label_column=args.label_column,
-        max_samples=args.max_samples,
-    )
-
     logger.info(f"Model: {training_config.model_name}")
-    logger.info(f"Data: {args.data}")
     logger.info(f"Epochs: {training_config.num_epochs}")
     logger.info(f"Batch size: {training_config.batch_size}")
     logger.info(f"4-bit quantization: {training_config.use_4bit_quantization}")
     logger.info(f"LoRA rank: {training_config.lora.r}")
 
-    # Prepare data
+    # Prepare data based on source
     logger.info("Preparing data...")
-    data_processor = DataProcessor(training_config, data_config)
-    datasets = data_processor.prepare_from_file(args.data)
+
+    if args.sample:
+        # Use synthetic sample data
+        logger.info("Using synthetic sample data for testing")
+        from transformers import AutoTokenizer
+
+        datasets = get_sample_data(n_samples=args.max_samples or 100, seed=args.seed)
+
+        # Tokenize
+        tokenizer = AutoTokenizer.from_pretrained(training_config.model_name)
+
+        def tokenize_fn(examples):
+            return tokenizer(
+                examples["text"],
+                truncation=True,
+                padding="max_length",
+                max_length=training_config.max_length,
+            )
+
+        datasets = datasets.map(tokenize_fn, batched=True, remove_columns=["text"])
+
+    elif args.dataset:
+        # Load from HuggingFace
+        logger.info(f"Loading HuggingFace dataset: {args.dataset}")
+        loader = JigsawDatasetLoader()
+        datasets = loader.load_and_tokenize(
+            dataset_name=args.dataset,
+            tokenizer_name=training_config.model_name,
+            max_length=training_config.max_length,
+            max_samples=args.max_samples,
+            seed=args.seed,
+        )
+
+    else:
+        # Load from local file
+        if not args.data.exists():
+            logger.error(f"Data file not found: {args.data}")
+            sys.exit(1)
+
+        logger.info(f"Loading from file: {args.data}")
+        data_config = DataConfig(
+            text_column=args.text_column,
+            label_column=args.label_column,
+            max_samples=args.max_samples,
+        )
+        data_processor = DataProcessor(training_config, data_config)
+        datasets = data_processor.prepare_from_file(args.data)
 
     logger.info(f"Train samples: {len(datasets['train'])}")
     logger.info(f"Validation samples: {len(datasets['validation'])}")
