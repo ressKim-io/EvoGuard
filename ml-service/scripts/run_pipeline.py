@@ -2,13 +2,14 @@
 """CLI script for running the Adversarial MLOps Pipeline.
 
 This script provides a command-line interface for:
-- Running pipeline cycles
+- Running pipeline cycles (single or continuous)
 - Checking pipeline status
 - Viewing execution history
 - Configuring pipeline parameters
 
 Usage:
     python scripts/run_pipeline.py run [--cycle-id ID]
+    python scripts/run_pipeline.py continuous --hours 8 [--interval 60]
     python scripts/run_pipeline.py status
     python scripts/run_pipeline.py history [--limit N]
     python scripts/run_pipeline.py config [--show | --update KEY=VALUE]
@@ -18,6 +19,7 @@ import argparse
 import asyncio
 import json
 import logging
+import signal
 import sys
 from pathlib import Path
 
@@ -27,6 +29,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from ml_service.pipeline.config import PipelineConfig
 from ml_service.pipeline.orchestrator import create_pipeline, AdversarialPipelineOrchestrator
+from ml_service.pipeline.scheduler import PipelineScheduler, create_scheduled_pipeline
 
 
 def setup_logging(verbose: bool = False) -> None:
@@ -217,6 +220,69 @@ def show_metrics(pipeline: AdversarialPipelineOrchestrator) -> int:
     return 0
 
 
+async def run_continuous(
+    config: PipelineConfig,
+    hours: float,
+    interval_minutes: int = 60,
+) -> int:
+    """Run pipeline continuously for specified hours.
+
+    Args:
+        config: Pipeline configuration.
+        hours: Duration in hours.
+        interval_minutes: Minutes between cycles.
+
+    Returns:
+        Exit code.
+    """
+    print("=" * 60)
+    print("ADVERSARIAL MLOPS PIPELINE - CONTINUOUS MODE")
+    print("=" * 60)
+    print(f"Duration:      {hours} hours")
+    print(f"Interval:      {interval_minutes} minutes between cycles")
+    print(f"Ctrl+C to stop gracefully")
+    print("=" * 60 + "\n")
+
+    pipeline, scheduler = create_scheduled_pipeline(config, interval_minutes)
+
+    # Handle Ctrl+C gracefully
+    loop = asyncio.get_event_loop()
+
+    def signal_handler():
+        print("\n\nReceived stop signal, finishing current cycle...")
+        scheduler.stop()
+
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, signal_handler)
+
+    # Callback for each cycle
+    def on_cycle_complete(result):
+        evasion = f"{result.attack_result.evasion_rate:.1%}" if result.attack_result else "N/A"
+        status = "✓" if result.success else "✗"
+        retrain = "→ RETRAINED" if result.retraining_triggered else ""
+        print(f"  [{status}] Cycle {result.cycle_id}: evasion={evasion} {retrain}")
+
+    scheduler.on_cycle_complete = on_cycle_complete
+
+    # Run
+    stats = await scheduler.run_for_duration(hours=hours)
+
+    # Print summary
+    print("\n" + "=" * 60)
+    print("EXECUTION SUMMARY")
+    print("=" * 60)
+    print(f"Total Duration:      {(stats.stopped_at - stats.started_at).total_seconds() / 3600:.2f} hours")
+    print(f"Total Cycles:        {stats.total_cycles}")
+    print(f"Successful:          {stats.successful_cycles}")
+    print(f"Failed:              {stats.failed_cycles}")
+    print(f"Retraining Runs:     {stats.retraining_triggered}")
+    print(f"Total Evasions:      {stats.total_evasions}")
+    print(f"Samples Collected:   {stats.total_samples_collected}")
+    print("=" * 60)
+
+    return 0 if stats.failed_cycles == 0 else 1
+
+
 def main() -> int:
     """Main entry point."""
     parser = argparse.ArgumentParser(
@@ -224,12 +290,14 @@ def main() -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python run_pipeline.py run                  # Run a single pipeline cycle
-  python run_pipeline.py run --cycle-id test  # Run with custom cycle ID
-  python run_pipeline.py status               # Show pipeline status
-  python run_pipeline.py history --limit 5    # Show last 5 cycles
-  python run_pipeline.py config               # Show configuration
-  python run_pipeline.py metrics              # Show aggregated metrics
+  python run_pipeline.py run                        # Run a single pipeline cycle
+  python run_pipeline.py run --cycle-id test        # Run with custom cycle ID
+  python run_pipeline.py continuous --hours 8       # Run for 8 hours
+  python run_pipeline.py continuous -H 24 -I 30     # Run 24 hours, 30min interval
+  python run_pipeline.py status                     # Show pipeline status
+  python run_pipeline.py history --limit 5          # Show last 5 cycles
+  python run_pipeline.py config                     # Show configuration
+  python run_pipeline.py metrics                    # Show aggregated metrics
         """,
     )
 
@@ -257,6 +325,21 @@ Examples:
         "--mock",
         action="store_true",
         help="Use mock classifier (for testing)",
+    )
+
+    # Continuous command
+    cont_parser = subparsers.add_parser("continuous", help="Run pipeline continuously for N hours")
+    cont_parser.add_argument(
+        "-H", "--hours",
+        type=float,
+        required=True,
+        help="Duration in hours (e.g., 8 for 8 hours)",
+    )
+    cont_parser.add_argument(
+        "-I", "--interval",
+        type=int,
+        default=60,
+        help="Minutes between cycles (default: 60)",
     )
 
     # Status command
@@ -293,6 +376,8 @@ Examples:
     # Execute command
     if args.command == "run":
         return asyncio.run(run_cycle(pipeline, args.cycle_id))
+    elif args.command == "continuous":
+        return asyncio.run(run_continuous(config, args.hours, args.interval))
     elif args.command == "status":
         return show_status(pipeline)
     elif args.command == "history":

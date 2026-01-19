@@ -26,6 +26,7 @@ from ml_service.pipeline.quality_gate import QualityGate, QualityGateDecision, D
 from ml_service.pipeline.sample_collector import FailedSampleCollector, FailedSample
 from ml_service.pipeline.data_augmentor import TrainingDataAugmentor, AugmentedDataset
 from ml_service.pipeline.model_promoter import ModelPromoter, PromotionDecision
+from ml_service.pipeline.scheduler import PipelineScheduler, SchedulerStats, run_continuous
 
 __all__ = [
     # Config
@@ -51,4 +52,8 @@ __all__ = [
     # Model Promoter
     "ModelPromoter",
     "PromotionDecision",
+    # Scheduler
+    "PipelineScheduler",
+    "SchedulerStats",
+    "run_continuous",
 ]
