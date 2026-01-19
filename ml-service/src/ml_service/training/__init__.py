@@ -9,10 +9,12 @@ This module provides:
 """
 
 from ml_service.training.config import DataConfig, LoRAConfig, TrainingConfig
+from ml_service.training.experiment_logger import ExperimentLogger, log_training_run
 
 __all__ = [
     "DataConfig",
     "DataProcessor",
+    "ExperimentLogger",
     "JigsawDatasetLoader",
     "LoRAConfig",
     "MLflowTracker",
@@ -20,6 +22,7 @@ __all__ = [
     "TextDataset",
     "TrainingConfig",
     "get_sample_data",
+    "log_training_run",
 ]
 
 # These require optional training dependencies

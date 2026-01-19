@@ -303,6 +303,37 @@ def main() -> None:
     logger.info(f"Test metrics: {test_metrics}")
     logger.info(f"Model saved to: {results['model_path']}")
 
+    # Log experiment
+    from ml_service.training.experiment_logger import log_training_run
+
+    experiment_name = args.run_name or f"qlora-{training_config.model_name.split('/')[-1]}"
+    dataset_name = args.dataset or (str(args.data) if args.data else "sample")
+
+    experiment = log_training_run(
+        name=experiment_name,
+        config={
+            "model_name": training_config.model_name,
+            "max_length": training_config.max_length,
+            "num_epochs": training_config.num_epochs,
+            "batch_size": training_config.batch_size,
+            "learning_rate": training_config.learning_rate,
+            "gradient_accumulation_steps": training_config.gradient_accumulation_steps,
+            "use_4bit_quantization": training_config.use_4bit_quantization,
+            "lora_r": training_config.lora.r,
+            "lora_alpha": training_config.lora.lora_alpha,
+            "max_samples": args.max_samples,
+        },
+        train_metrics={"train_loss": results["train_loss"]},
+        eval_metrics=results["eval_metrics"],
+        test_metrics=test_metrics,
+        dataset=dataset_name,
+        model_path=str(results["model_path"]),
+        experiments_dir=Path(__file__).parent.parent / "experiments",
+    )
+
+    logger.info(f"Experiment logged: #{experiment['id']}")
+    logger.info(f"Report saved to: experiments/reports/LATEST_REPORT.md")
+
 
 if __name__ == "__main__":
     main()

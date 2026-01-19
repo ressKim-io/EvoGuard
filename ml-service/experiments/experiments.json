@@ -1,0 +1,39 @@
+[
+  {
+    "id": 1,
+    "name": "qlora-bert-base-uncased",
+    "timestamp": "2026-01-19T20:58:07.360139",
+    "config": {
+      "model_name": "bert-base-uncased",
+      "max_length": 256,
+      "num_epochs": 3,
+      "batch_size": 4,
+      "learning_rate": 0.0002,
+      "gradient_accumulation_steps": 4,
+      "use_4bit_quantization": true,
+      "lora_r": 16,
+      "lora_alpha": 32,
+      "max_samples": 10000
+    },
+    "metrics": {
+      "train_loss": 0.2133,
+      "eval_loss": 0.2582,
+      "eval_accuracy": 0.913,
+      "eval_f1": 0.9131,
+      "eval_precision": 0.9133,
+      "eval_recall": 0.913,
+      "test_eval_loss": 1.1368,
+      "test_eval_accuracy": 0.7279,
+      "test_eval_f1": 0.8085,
+      "test_eval_precision": 0.9597,
+      "test_eval_recall": 0.7279
+    },
+    "dataset": "jigsaw (Arsive/toxicity_classification_jigsaw)",
+    "model_path": "models/checkpoints",
+    "notes": null,
+    "tags": [
+      "qlora",
+      "toxic-classification"
+    ]
+  }
+]
