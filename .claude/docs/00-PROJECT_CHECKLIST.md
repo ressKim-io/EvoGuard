@@ -99,8 +99,8 @@
 | 모델 레지스트리 | ✅ | `05-MLOPS.md` |
 | 데이터 버전 관리 (DVC) | ✅ | `.dvc/config` |
 | Docker Compose MLOps | ✅ | `infra/docker-compose.yml` |
-| Feature Store | 🔄 | `11-FEATURE_STORE.md` |
-| 모델 모니터링 | 🔄 | `12-MODEL_MONITORING.md` |
+| Feature Store | ✅ | `11-FEATURE_STORE.md` |
+| 모델 모니터링 | ✅ | `12-MODEL_MONITORING.md` |
 
 ### MLOps 성숙도 단계
 1. **Level 0**: 수동 프로세스
@@ -177,7 +177,7 @@
 
 ### 내부 문서
 - `.claude/docs/` - 프로젝트 가이드 문서
-- `claude.md` - 프로젝트 요약
+- `CLAUDE.md` - 프로젝트 요약
 
 ---
 
