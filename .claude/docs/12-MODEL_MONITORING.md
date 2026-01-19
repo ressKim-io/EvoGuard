@@ -781,10 +781,10 @@ infra/grafana/provisioning/dashboards/json/
 
 ## 10. 구현 로드맵
 
-### Phase 1: 기본 모니터링 (MVP)
-- [ ] Prometheus 메트릭 정의
-- [ ] 예측 로깅 구현
-- [ ] 신뢰도 분포 모니터링
+### Phase 1: 기본 모니터링 (MVP) ✅ 완료
+- [x] Prometheus 메트릭 정의 (`metrics/collector.py`)
+- [x] 예측 로깅 구현 (`prediction/logger.py`)
+- [x] 신뢰도 분포 모니터링 (`prediction/confidence.py`)
 
 ### Phase 2: Drift Detection
 - [ ] Data Drift (PSI, KS Test)
@@ -824,3 +824,4 @@ infra/grafana/provisioning/dashboards/json/
 ---
 
 *설계 완료: 2026-01-19*
+*Phase 1 MVP 구현 완료: 2026-01-19*
