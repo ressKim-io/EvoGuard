@@ -240,7 +240,7 @@ class TrainingDataAugmentor:
                     "text": evasion_result.evasion,
                     "label": 1,  # toxic
                     "source": "augmented",
-                    "strategy": evasion_result.strategy_name,
+                    "strategy": evasion_result.strategy,
                 })
             return variants
         except Exception as e:
