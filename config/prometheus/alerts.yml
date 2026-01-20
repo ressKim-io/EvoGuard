@@ -1,0 +1,147 @@
+groups:
+  - name: evoguard-ml-alerts
+    rules:
+      # High evasion rate warning
+      - alert: HighEvasionRate
+        expr: adversarial_evasion_rate > 0.3
+        for: 5m
+        labels:
+          severity: warning
+          service: ml-service
+        annotations:
+          summary: "High evasion rate detected"
+          description: "Evasion rate is {{ $value | humanizePercentage }}, threshold is 30%"
+
+      # Critical evasion rate
+      - alert: CriticalEvasionRate
+        expr: adversarial_evasion_rate > 0.5
+        for: 2m
+        labels:
+          severity: critical
+          service: ml-service
+        annotations:
+          summary: "CRITICAL: Evasion rate above 50%!"
+          description: "Evasion rate is {{ $value | humanizePercentage }}, immediate action required"
+
+      # Model performance degraded
+      - alert: ModelPerformanceDegraded
+        expr: model_f1_score < 0.85
+        for: 10m
+        labels:
+          severity: warning
+          service: ml-service
+        annotations:
+          summary: "Model F1 score below threshold"
+          description: "F1 score is {{ $value | printf \"%.2f\" }}, threshold is 0.85"
+
+      # High prediction latency
+      - alert: HighPredictionLatency
+        expr: histogram_quantile(0.99, rate(model_prediction_latency_seconds_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          service: ml-service
+        annotations:
+          summary: "High prediction latency (P99)"
+          description: "P99 latency is {{ $value | printf \"%.2f\" }}s, threshold is 0.5s"
+
+      # Data drift detected
+      - alert: DataDriftDetected
+        expr: data_drift_score > 0.1
+        for: 15m
+        labels:
+          severity: warning
+          service: ml-service
+        annotations:
+          summary: "Data drift detected"
+          description: "Drift score is {{ $value | printf \"%.3f\" }}, investigation recommended"
+
+  - name: evoguard-service-alerts
+    rules:
+      # ML Service down
+      - alert: MLServiceDown
+        expr: up{job="ml-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: ml-service
+        annotations:
+          summary: "ML Service is DOWN"
+          description: "ml-service has been unreachable for more than 1 minute"
+
+      # API Service down
+      - alert: APIServiceDown
+        expr: up{job="api-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: api-service
+        annotations:
+          summary: "API Service is DOWN"
+          description: "api-service has been unreachable for more than 1 minute"
+
+      # High error rate
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High HTTP error rate"
+          description: "Error rate is {{ $value | humanizePercentage }}"
+
+  - name: evoguard-coevolution-alerts
+    rules:
+      # No co-evolution cycles
+      - alert: CoevolutionStalled
+        expr: increase(coevolution_cycle_total[30m]) == 0
+        for: 30m
+        labels:
+          severity: warning
+          service: coevolution
+        annotations:
+          summary: "Co-evolution training stalled"
+          description: "No co-evolution cycles in the last 30 minutes"
+
+      # Too many defender retrains
+      - alert: FrequentDefenderRetraining
+        expr: increase(defender_retrain_total[1h]) > 5
+        for: 5m
+        labels:
+          severity: warning
+          service: coevolution
+        annotations:
+          summary: "Frequent defender retraining"
+          description: "Defender retrained {{ $value }} times in the last hour"
+
+  - name: evoguard-system-alerts
+    rules:
+      # High CPU usage
+      - alert: HighCPUUsage
+        expr: 100 - (avg(irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value | printf \"%.1f\" }}%"
+
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value | printf \"%.1f\" }}%"
+
+      # Disk space low
+      - alert: DiskSpaceLow
+        expr: (1 - (node_filesystem_avail_bytes{fstype!="tmpfs"} / node_filesystem_size_bytes{fstype!="tmpfs"})) * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk space low"
+          description: "Disk usage is {{ $value | printf \"%.1f\" }}% on {{ $labels.mountpoint }}"

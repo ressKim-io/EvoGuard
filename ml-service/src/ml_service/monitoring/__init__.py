@@ -1,67 +1,46 @@
-"""Model Monitoring - ML model performance and drift monitoring.
+"""Monitoring module for EvoGuard ML Service.
 
-This module provides tools for monitoring ML model performance in production:
-- Prometheus metrics collection
-- Prediction logging and tracking
-- Confidence distribution monitoring
-- Data and Concept Drift detection (Phase 2)
-- Alert system (Phase 3)
-- Automated actions (Phase 4)
-- A/B testing and report generation (Phase 5)
+Provides Prometheus metrics and monitoring utilities.
 """
 
-from ml_service.monitoring.alerts import (
-    Alert,
-    AlertDispatcher,
-    AlertHandler,
-    AlertManagerHandler,
-    AlertRule,
-    AlertRuleRegistry,
-    AlertSeverity,
-    AlertStatus,
-    CompositeRule,
-    ConsoleHandler,
-    DriftRule,
-    EmailHandler,
-    HandlerResult,
-    SlackHandler,
-    ThresholdRule,
-    WebhookHandler,
-    create_default_rules,
-)
-from ml_service.monitoring.metrics import MetricsCollector
-from ml_service.monitoring.prediction import (
-    AnomalyResult,
-    ConfidenceAnomalyDetector,
-    ConfidenceDistributionMonitor,
-    ConfidenceStats,
-    PredictionLogger,
-    PredictionRecord,
+from ml_service.monitoring.metrics import (
+    PREDICTION_COUNTER,
+    PREDICTION_LATENCY,
+    PREDICTION_CONFIDENCE,
+    EVASION_RATE,
+    ATTACK_COUNTER,
+    ATTACK_SUCCESS_COUNTER,
+    COEVOLUTION_CYCLE,
+    DEFENDER_RETRAIN,
+    ATTACKER_EVOLUTION,
+    MODEL_F1_SCORE,
+    MODEL_ACCURACY,
+    DATA_DRIFT_SCORE,
+    setup_metrics,
+    record_prediction,
+    record_attack,
+    record_coevolution_cycle,
+    update_model_metrics,
+    update_evasion_rate,
 )
 
 __all__ = [
-    "Alert",
-    "AlertDispatcher",
-    "AlertHandler",
-    "AlertManagerHandler",
-    "AlertRule",
-    "AlertRuleRegistry",
-    "AlertSeverity",
-    "AlertStatus",
-    "AnomalyResult",
-    "CompositeRule",
-    "ConfidenceAnomalyDetector",
-    "ConfidenceDistributionMonitor",
-    "ConfidenceStats",
-    "ConsoleHandler",
-    "DriftRule",
-    "EmailHandler",
-    "HandlerResult",
-    "MetricsCollector",
-    "PredictionLogger",
-    "PredictionRecord",
-    "SlackHandler",
-    "ThresholdRule",
-    "WebhookHandler",
-    "create_default_rules",
+    "PREDICTION_COUNTER",
+    "PREDICTION_LATENCY",
+    "PREDICTION_CONFIDENCE",
+    "EVASION_RATE",
+    "ATTACK_COUNTER",
+    "ATTACK_SUCCESS_COUNTER",
+    "COEVOLUTION_CYCLE",
+    "DEFENDER_RETRAIN",
+    "ATTACKER_EVOLUTION",
+    "MODEL_F1_SCORE",
+    "MODEL_ACCURACY",
+    "DATA_DRIFT_SCORE",
+    "setup_metrics",
+    "record_prediction",
+    "record_attack",
+    "record_coevolution_cycle",
+    "update_model_metrics",
+    "update_evasion_rate",
 ]

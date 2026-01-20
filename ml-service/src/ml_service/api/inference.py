@@ -23,6 +23,18 @@ from typing import Any
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
+# Prometheus metrics
+try:
+    from ml_service.monitoring.metrics import (
+        setup_metrics,
+        record_prediction,
+        INPUT_TEXT_LENGTH,
+        MODEL_LOAD_TIME,
+    )
+    METRICS_ENABLED = True
+except ImportError:
+    METRICS_ENABLED = False
+
 logger = logging.getLogger(__name__)
 
 # Global classifier instance
@@ -59,11 +71,21 @@ def get_classifier():
 async def lifespan(app: FastAPI):
     """Load model on startup."""
     logger.info("Loading classifier model...")
+    load_start = time.perf_counter()
     try:
         get_classifier()
-        logger.info("Model loaded successfully")
+        load_time = time.perf_counter() - load_start
+        logger.info(f"Model loaded successfully in {load_time:.2f}s")
+        if METRICS_ENABLED:
+            MODEL_LOAD_TIME.set(load_time)
     except Exception as e:
         logger.error(f"Failed to load model: {e}")
+
+    # Setup Prometheus metrics endpoint
+    if METRICS_ENABLED:
+        setup_metrics(app)
+        logger.info("Prometheus metrics enabled at /metrics")
+
     yield
     logger.info("Shutting down...")
 
@@ -156,7 +178,17 @@ async def predict(request: PredictRequest) -> PredictResponse:
         results = classifier.predict([request.text])
         result = results[0]
 
-        latency_ms = (time.perf_counter() - start_time) * 1000
+        latency_seconds = time.perf_counter() - start_time
+        latency_ms = latency_seconds * 1000
+
+        # Record Prometheus metrics
+        if METRICS_ENABLED:
+            record_prediction(
+                label=result["label"],
+                confidence=result["confidence"],
+                latency=latency_seconds,
+            )
+            INPUT_TEXT_LENGTH.observe(len(request.text))
 
         return PredictResponse(
             toxic=result["label"] == 1,
