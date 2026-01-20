@@ -230,6 +230,9 @@ class AdaptivePrecisionManager:
             if self.overflow_count > self.total_steps * 0.1:
                 logger.warning("High overflow rate, consider using FP32")
 
+            # IMPORTANT: Must call scaler.update() even when skipping step
+            # to reset the scaler state for the next iteration
+            self.scaler.update()
             return False
 
         # Clip gradients
