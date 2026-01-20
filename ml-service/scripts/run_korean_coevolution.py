@@ -53,12 +53,12 @@ class KoreanCoevolutionConfig:
     retrain_epochs: int = 2
     merge_with_original: bool = True
 
-    # 공격
-    attack_batch_size: int = 30
-    attack_variants: int = 10
+    # 공격 - 강화된 설정
+    attack_batch_size: int = 100  # 30 → 100 (더 많은 샘플 공격)
+    attack_variants: int = 15     # 10 → 15 (더 많은 변형 생성)
 
-    # 타이밍
-    cycle_interval_minutes: int = 10
+    # 타이밍 - 연속 모드 (대기 없음)
+    cycle_interval_minutes: int = 0
 
     # 모델
     model_name: str = "beomi/KcELECTRA-base-v2022"
@@ -119,8 +119,7 @@ class KoreanCoevolution:
         """Train initial Korean model."""
         from ml_service.training.trainer import QLoRATrainer
         from ml_service.training.config import TrainingConfig
-        from ml_service.training.data import prepare_dataset
-        import pandas as pd
+        from ml_service.training.data import DataProcessor
 
         logger.info("Training initial Korean toxic classifier...")
 
@@ -129,26 +128,23 @@ class KoreanCoevolution:
         if not data_path.exists():
             raise FileNotFoundError(f"Korean data not found: {data_path}")
 
-        df = pd.read_csv(data_path)
-        logger.info(f"Loaded {len(df)} samples from {data_path}")
-
-        # Prepare dataset
-        tokenized = prepare_dataset(
-            df,
-            model_name=self.config.model_name,
-            text_column="text",
-            label_column="label",
-        )
-
-        # Train
+        # Training config - disable quantization for ELECTRA models
         training_config = TrainingConfig(
             model_name=self.config.model_name,
             output_dir=self.config.model_path,
             num_epochs=3,
             batch_size=16,
             eval_batch_size=32,
+            max_length=128,
+            use_4bit_quantization=False,  # ELECTRA doesn't support 4-bit quantization well
         )
 
+        # Prepare dataset using DataProcessor
+        processor = DataProcessor(training_config)
+        tokenized = processor.prepare_from_file(data_path)
+        logger.info(f"Prepared dataset from {data_path}")
+
+        # Train
         trainer = QLoRATrainer(training_config)
         trainer.setup_model()
         result = trainer.train(tokenized, use_mlflow=False)
@@ -232,15 +228,16 @@ class KoreanCoevolution:
         logger.info(f"Augmented dataset: {augmented.total_count} samples")
 
         # Prepare for training
-        tokenized = augmentor.prepare_for_training(augmented, model_name=self.config.model_name)
+        tokenized = augmentor.prepare_for_training(augmented, tokenizer_name=self.config.model_name)
 
-        # Train
+        # Train - disable quantization for ELECTRA models
         training_config = TrainingConfig(
             model_name=self.config.model_name,
             output_dir=self.config.model_path,
             num_epochs=self.config.retrain_epochs,
             batch_size=16,
             eval_batch_size=32,
+            use_4bit_quantization=False,
         )
 
         trainer = QLoRATrainer(training_config)
@@ -412,7 +409,8 @@ class KoreanCoevolution:
         print(f"{'Cycle':<8} {'Evasion':<12} {'Action':<20}")
         print("-" * 40)
         for r in self.history[-10:]:
-            print(f"{r.cycle_num:<8} {r.evasion_rate:.1%:<12} {r.action:<20}")
+            evasion_str = f"{r.evasion_rate:.1%}"
+            print(f"{r.cycle_num:<8} {evasion_str:<12} {r.action:<20}")
 
         print("=" * 60)
 

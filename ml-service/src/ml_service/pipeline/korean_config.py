@@ -63,11 +63,12 @@ class KoreanAttackConfig:
     """Korean attack configuration."""
 
     # 공격 설정
-    num_variants: int = 10  # 텍스트당 변형 수
-    batch_size: int = 50  # 배치당 원본 텍스트 수
+    num_variants: int = 15  # 텍스트당 변형 수 (증가)
+    batch_size: int = 100  # 배치당 원본 텍스트 수 (증가)
 
-    # 사용할 전략
+    # 사용할 전략 - 기본 + 고급 전략 모두 포함
     strategies: list[str] = field(default_factory=lambda: [
+        # 기본 전략
         "chosung",           # 초성 변환
         "jamo_decompose",    # 자모 분리
         "number_sub",        # 숫자 치환
@@ -78,6 +79,18 @@ class KoreanAttackConfig:
         "zero_width",        # 제로 너비 문자
         "consonant_elongation",  # 자음 늘리기
         "mixed",             # 복합 공격
+        # 고급 전략
+        "reverse",           # 역순 공격
+        "slang",             # 신조어/줄임말
+        "dialect",           # 방언 변형
+        "compat_jamo",       # 호환용 자모
+        "partial_mask",      # 부분 마스킹
+        "unicode_variant",   # 유니코드 변형
+        "context_injection", # 맥락 주입
+        "leet_korean",       # 한글 리트
+        "syllable_swap",     # 음절 교환
+        "typo",              # 의도적 오타
+        "heavy_mixed",       # 강력한 복합 공격
     ])
 
 
