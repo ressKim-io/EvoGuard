@@ -31,6 +31,19 @@ from ml_service.pipeline.classifier_adapter import (
     TrainedClassifierAdapter,
     create_trained_classifier,
 )
+from ml_service.pipeline.korean_config import (
+    KoreanPipelineConfig,
+    KoreanModelConfig,
+    KoreanDataConfig,
+    KoreanAttackConfig,
+    get_korean_config,
+)
+from ml_service.pipeline.korean_attack_runner import (
+    KoreanAttackRunner,
+    KoreanBatchResult,
+    KoreanAttackResult,
+    run_korean_attack_test,
+)
 
 __all__ = [
     # Config
@@ -63,4 +76,14 @@ __all__ = [
     # Classifier Adapter
     "TrainedClassifierAdapter",
     "create_trained_classifier",
+    # Korean Pipeline
+    "KoreanPipelineConfig",
+    "KoreanModelConfig",
+    "KoreanDataConfig",
+    "KoreanAttackConfig",
+    "get_korean_config",
+    "KoreanAttackRunner",
+    "KoreanBatchResult",
+    "KoreanAttackResult",
+    "run_korean_attack_test",
 ]
