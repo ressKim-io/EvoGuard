@@ -27,6 +27,10 @@ from ml_service.pipeline.sample_collector import FailedSampleCollector, FailedSa
 from ml_service.pipeline.data_augmentor import TrainingDataAugmentor, AugmentedDataset
 from ml_service.pipeline.model_promoter import ModelPromoter, PromotionDecision
 from ml_service.pipeline.scheduler import PipelineScheduler, SchedulerStats, run_continuous
+from ml_service.pipeline.classifier_adapter import (
+    TrainedClassifierAdapter,
+    create_trained_classifier,
+)
 
 __all__ = [
     # Config
@@ -56,4 +60,7 @@ __all__ = [
     "PipelineScheduler",
     "SchedulerStats",
     "run_continuous",
+    # Classifier Adapter
+    "TrainedClassifierAdapter",
+    "create_trained_classifier",
 ]
