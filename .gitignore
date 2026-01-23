@@ -55,6 +55,7 @@ __pycache__/
 # Virtual environments
 venv/
 .venv/
+.venv-*/
 env/
 .env/
 ENV/
@@ -124,6 +125,7 @@ data/*
 # Model files
 models/*
 !models/.gitkeep
+ml-service/models/
 *.pt
 *.pth
 *.bin
