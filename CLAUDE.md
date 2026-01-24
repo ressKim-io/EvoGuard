@@ -1,7 +1,95 @@
 # EvoGuard Project
 
 ## 프로젝트 요약
-적대적 공격 시뮬레이션을 통한 ML 모델 강건성 검증 파이프라인
+**한국어 혐오표현 탐지를 위한 공격-방어 공진화(Co-Evolution) 시스템**
+
+적대적 공격 시뮬레이션을 통해 ML 모델의 강건성을 지속적으로 향상시키는 파이프라인
+
+---
+
+## 핵심: 한국어 공격-방어 시스템
+
+### 작동 원리
+```
+┌─────────────┐                    ┌─────────────┐
+│   Attacker  │ ── evasion>30% ──▶ │  Defender   │ 재학습
+│  (공격자)    │                    │  (방어자)    │
+│             │ ◀── evasion<10% ── │             │ 진화
+└─────────────┘                    └─────────────┘
+        └────── 10~30% = 균형 상태 ──────┘
+```
+
+### 현재 최고 성능
+| 모델 | F1 Score | FP | FN | 용도 |
+|------|----------|----|----|------|
+| **앙상블 (P2+P4)** | **0.9594** | 78 | 150 | 프로덕션 권장 |
+| Phase 2 Combined | 0.9597 | 80 | 164 | 단일 모델 최고 |
+| Phase 5 CNN | 0.8946 | 419 | 362 | 실험 |
+
+### 베이스 모델
+- `beomi/KcELECTRA-base-v2022` (한국어 ELECTRA)
+
+### 학습 데이터셋 (한국어)
+- **KOTOX**: Korean Toxic 데이터셋
+- **BEEP**: 한국어 혐오표현
+- **UnSmile**: 여성가족부 혐오표현 데이터
+- **욕설 데이터셋**: 한국어 비속어
+
+---
+
+## 품질 향상 스크립트
+
+### 단계별 학습 (Phase 1-5)
+| Phase | 스크립트 | 설명 |
+|-------|----------|------|
+| 1 | `ml-service/scripts/phase1_deobfuscation.py` | 난독화 해제 학습 |
+| 2 | `ml-service/scripts/phase2_combined_data.py` | 통합 데이터 학습 (최고 성능) |
+| 3 | `ml-service/scripts/phase3_large_model.py` | 대형 모델 실험 |
+| 4 | `ml-service/scripts/phase4_augmented.py` | 에러 기반 증강 학습 |
+| 5 | `ml-service/scripts/phase5_cnn_enhanced.py` | CNN 레이어 추가 |
+
+### MLOps 자동화 (반복 실행)
+
+> **"학습 시작해"** 라고 하면 `.claude/docs/14-TRAINING_GUIDE.md` 참조
+
+```bash
+cd ml-service && source .venv/bin/activate
+
+# 연속 공진화 (권장) - 트리거 기반, GPU 최적화
+python scripts/run_continuous_coevolution.py --max-cycles 100
+
+# 목표 달성까지 실행
+python scripts/run_continuous_coevolution.py --target-evasion 0.03
+
+# 시간 제한 실행
+python scripts/run_optimized_coevolution.py --hours 4
+```
+
+**연속 공진화 특징:**
+- 작업 완료 즉시 다음 사이클 (시간 기반 X)
+- AMP(Mixed Precision) 적용
+- 트리거 기반 재학습 (evasion>8%, 샘플 축적, 주기적)
+- 수렴 감지 시 공격 자동 강화
+
+### 분석 및 유틸리티
+| 스크립트 | 설명 |
+|----------|------|
+| `ml-service/scripts/error_analysis.py` | FP/FN 에러 분석 |
+| `ml-service/scripts/augment_data.py` | 데이터 증강 |
+| `ml-service/scripts/retrain_from_samples.py` | 실패 샘플로 재학습 |
+
+---
+
+## 주요 모델 경로
+| 모델 | 경로 |
+|------|------|
+| 앙상블 추론 | `ml-service/src/ml_service/inference/ensemble_classifier.py` |
+| Phase 2 (최고) | `ml-service/models/phase2-combined/` |
+| Phase 4 (증강) | `ml-service/models/phase4-augmented/` |
+| 공진화 모델 | `ml-service/models/korean-coevolution-model/` |
+| 학습 결과 | `ml-service/models/TRAINING_RESULTS.md` |
+
+---
 
 ## 기술 스택
 - **Backend**: Go 1.21+ (api-service), Python 3.12 (ml-service)
@@ -23,15 +111,17 @@
 - **Commit**: Conventional Commits (`feat:`, `fix:`, `docs:`)
 
 ## 현재 진행 상황
-- Feature Store MVP 완료
-- Model Monitoring 설계 완료
-- 다음: Offline/Online Store 구현
+- Phase 1-5 학습 완료 (최고 F1: 0.9597)
+- 공진화 시스템 776 사이클 실행 완료
+- 앙상블 모델 프로덕션 준비 완료
+- 다음: 공진화를 Phase 2 모델 베이스로 재실행하여 추가 성능 향상
 
 ## 참고 문서
 > 아래 문서들은 필요시 `@파일경로`로 로드하세요
 
 | 문서 | 경로 | 설명 |
 |------|------|------|
+| **학습 가이드** | `.claude/docs/14-TRAINING_GUIDE.md` | **학습 시작 시 필수 참조** |
 | 토큰 절약 가이드 | `.claude/docs/13-TOKEN_SAVING_GUIDE.md` | Claude Code 비용 최적화 |
 | 프로젝트 체크리스트 | `.claude/docs/00-PROJECT_CHECKLIST.md` | 전체 진행 상황 |
 | 개발 로드맵 | `.claude/docs/07-DEVELOPMENT_ROADMAP.md` | 단계별 계획 |
