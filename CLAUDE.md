@@ -22,8 +22,9 @@
 ### 현재 최고 성능
 | 모델 | F1 Score | FP | FN | 용도 |
 |------|----------|----|----|------|
-| **앙상블 (P2+P4)** | **0.9594** | 78 | 150 | 프로덕션 권장 |
-| Phase 2 Combined | 0.9597 | 80 | 164 | 단일 모델 최고 |
+| **앙상블 (P2+Coevo AND)** | **0.9696** | **60** | 168 | 프로덕션 권장 |
+| Phase 2 Combined | 0.9675 | 80 | 164 | 단일 모델 최고 |
+| Coevolution Latest | 0.9245 | 611 | 8 | 공격 방어 특화 (FN↓) |
 | Phase 5 CNN | 0.8946 | 419 | 362 | 실험 |
 
 ### 베이스 모델
@@ -84,9 +85,9 @@ python scripts/run_optimized_coevolution.py --hours 4
 | 모델 | 경로 |
 |------|------|
 | 앙상블 추론 | `ml-service/src/ml_service/inference/ensemble_classifier.py` |
-| Phase 2 (최고) | `ml-service/models/phase2-combined/` |
+| Phase 2 | `ml-service/models/phase2-combined/` |
+| Coevolution Latest | `ml-service/models/coevolution-latest/` |
 | Phase 4 (증강) | `ml-service/models/phase4-augmented/` |
-| 공진화 모델 | `ml-service/models/korean-coevolution-model/` |
 | 학습 결과 | `ml-service/models/TRAINING_RESULTS.md` |
 
 ---
@@ -111,10 +112,10 @@ python scripts/run_optimized_coevolution.py --hours 4
 - **Commit**: Conventional Commits (`feat:`, `fix:`, `docs:`)
 
 ## 현재 진행 상황
-- Phase 1-5 학습 완료 (최고 F1: 0.9597)
-- 공진화 시스템 776 사이클 실행 완료
-- 앙상블 모델 프로덕션 준비 완료
-- 다음: 공진화를 Phase 2 모델 베이스로 재실행하여 추가 성능 향상
+- Phase 1-5 학습 완료
+- 슬랭 강화 공진화 500 사이클 완료 (evasion 20.5% → 0.0%)
+- **AND 앙상블 적용 완료** (F1: 0.9696, FP: 60)
+- 프로덕션 배포 준비 완료
 
 ## 참고 문서
 > 아래 문서들은 필요시 `@파일경로`로 로드하세요
