@@ -1,23 +1,27 @@
-"""Ensemble classifier combining Phase 2 and Phase 4 models.
+"""Ensemble classifier combining Phase 2 and Coevolution models.
 
-Best configuration: Phase2 (0.6) + Phase4 (0.4) weighted average.
-F1: 0.9594, FP: 78, FN: 150
+Best configuration: Phase2 + Coevolution with AND strategy.
+F1: 0.9696, FP: 60, FN: 168
+
+AND strategy: Both models must predict toxic for final toxic prediction.
+This reduces false positives while maintaining high detection accuracy.
 """
 
 import torch
 import torch.nn.functional as F
 from pathlib import Path
-from typing import List, Dict, Union, Tuple
+from typing import List, Dict, Union, Tuple, Literal
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 
 class EnsembleClassifier:
-    """Ensemble toxic text classifier using Phase2 + Phase4 models."""
+    """Ensemble toxic text classifier using Phase2 + Coevolution models."""
 
     def __init__(
         self,
         model1_path: str = "models/phase2-combined/best_model",
-        model2_path: str = "models/phase4-augmented/best_model",
+        model2_path: str = "models/coevolution-latest",
+        strategy: Literal["and", "or", "weighted"] = "and",
         weight1: float = 0.6,
         weight2: float = 0.4,
         threshold: float = 0.5,
@@ -26,13 +30,18 @@ class EnsembleClassifier:
         """Initialize ensemble classifier.
 
         Args:
-            model1_path: Path to Phase 2 model (conservative)
-            model2_path: Path to Phase 4 model (aggressive)
-            weight1: Weight for Phase 2 model (default: 0.6)
-            weight2: Weight for Phase 4 model (default: 0.4)
+            model1_path: Path to Phase 2 model (balanced)
+            model2_path: Path to Coevolution model (attack-resistant)
+            strategy: Ensemble strategy ('and', 'or', 'weighted')
+                - 'and': Both models must predict toxic (low FP)
+                - 'or': Either model predicts toxic (low FN)
+                - 'weighted': Weighted average of probabilities
+            weight1: Weight for model 1 (only used with 'weighted' strategy)
+            weight2: Weight for model 2 (only used with 'weighted' strategy)
             threshold: Classification threshold (default: 0.5)
             device: Device to use ('cuda', 'cpu', or None for auto)
         """
+        self.strategy = strategy
         self.weight1 = weight1
         self.weight2 = weight2
         self.threshold = threshold
@@ -50,14 +59,16 @@ class EnsembleClassifier:
         self.model1.to(self.device)
         self.model1.eval()
 
-        print(f"Loading Phase 4 model from {model2_path}...")
+        print(f"Loading Coevolution model from {model2_path}...")
         self.tokenizer2 = AutoTokenizer.from_pretrained(model2_path)
         self.model2 = AutoModelForSequenceClassification.from_pretrained(model2_path)
         self.model2.to(self.device)
         self.model2.eval()
 
         print(f"Ensemble ready on {self.device}")
-        print(f"Weights: Phase2={weight1}, Phase4={weight2}, Threshold={threshold}")
+        print(f"Strategy: {strategy.upper()}, Threshold={threshold}")
+        if strategy == "weighted":
+            print(f"Weights: Phase2={weight1}, Coevo={weight2}")
 
     def predict(
         self,
@@ -110,12 +121,24 @@ class EnsembleClassifier:
             out2 = self.model2(**enc2)
             probs2 = F.softmax(out2.logits, dim=-1)[:, 1].cpu().numpy()
 
-            # Ensemble
-            ensemble_probs = self.weight1 * probs1 + self.weight2 * probs2
-
+            # Ensemble based on strategy
             for i in range(len(texts)):
-                toxic_prob = float(ensemble_probs[i])
-                label = 1 if toxic_prob > self.threshold else 0
+                p1, p2 = float(probs1[i]), float(probs2[i])
+                pred1 = p1 > self.threshold
+                pred2 = p2 > self.threshold
+
+                if self.strategy == "and":
+                    # Both must predict toxic
+                    label = 1 if (pred1 and pred2) else 0
+                    toxic_prob = min(p1, p2)  # Conservative estimate
+                elif self.strategy == "or":
+                    # Either predicts toxic
+                    label = 1 if (pred1 or pred2) else 0
+                    toxic_prob = max(p1, p2)  # Aggressive estimate
+                else:  # weighted
+                    toxic_prob = self.weight1 * p1 + self.weight2 * p2
+                    label = 1 if toxic_prob > self.threshold else 0
+
                 confidence = toxic_prob if label == 1 else (1 - toxic_prob)
 
                 result = {
@@ -126,8 +149,8 @@ class EnsembleClassifier:
                 }
 
                 if return_probs:
-                    result["prob_phase2"] = round(float(probs1[i]), 4)
-                    result["prob_phase4"] = round(float(probs2[i]), 4)
+                    result["prob_phase2"] = round(p1, 4)
+                    result["prob_coevo"] = round(p2, 4)
 
                 results.append(result)
 
@@ -185,6 +208,7 @@ class EnsembleClassifier:
 
 def create_ensemble(
     model_dir: str = None,
+    strategy: Literal["and", "or", "weighted"] = "and",
     weight1: float = 0.6,
     weight2: float = 0.4,
     threshold: float = 0.5,
@@ -193,8 +217,9 @@ def create_ensemble(
 
     Args:
         model_dir: Base directory for models (default: ml-service/models)
-        weight1: Weight for Phase 2 model
-        weight2: Weight for Phase 4 model
+        strategy: Ensemble strategy ('and', 'or', 'weighted')
+        weight1: Weight for Phase 2 model (only for 'weighted')
+        weight2: Weight for Coevolution model (only for 'weighted')
         threshold: Classification threshold
 
     Returns:
@@ -219,7 +244,8 @@ def create_ensemble(
 
     return EnsembleClassifier(
         model1_path=str(model_dir / "phase2-combined" / "best_model"),
-        model2_path=str(model_dir / "phase4-augmented" / "best_model"),
+        model2_path=str(model_dir / "coevolution-latest"),
+        strategy=strategy,
         weight1=weight1,
         weight2=weight2,
         threshold=threshold,
@@ -234,9 +260,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ensemble toxic text classifier")
     parser.add_argument("texts", nargs="*", help="Texts to classify")
     parser.add_argument("--file", "-f", help="File with texts (one per line)")
+    parser.add_argument("--strategy", "-s", choices=["and", "or", "weighted"], default="and",
+                        help="Ensemble strategy (default: and)")
     parser.add_argument("--threshold", "-t", type=float, default=0.5, help="Classification threshold")
-    parser.add_argument("--weight1", type=float, default=0.6, help="Phase 2 weight")
-    parser.add_argument("--weight2", type=float, default=0.4, help="Phase 4 weight")
+    parser.add_argument("--weight1", type=float, default=0.6, help="Phase 2 weight (for weighted strategy)")
+    parser.add_argument("--weight2", type=float, default=0.4, help="Coevolution weight (for weighted strategy)")
     parser.add_argument("--verbose", "-v", action="store_true", help="Show detailed output")
     args = parser.parse_args()
 
@@ -249,10 +277,13 @@ if __name__ == "__main__":
     if not texts:
         print("Usage: python ensemble_classifier.py 'text to classify'")
         print("       python ensemble_classifier.py -f input.txt")
+        print("       python ensemble_classifier.py --strategy or 'text'  # low FN")
+        print("       python ensemble_classifier.py --strategy and 'text'  # low FP (default)")
         sys.exit(1)
 
     # Create classifier
     classifier = create_ensemble(
+        strategy=args.strategy,
         weight1=args.weight1,
         weight2=args.weight2,
         threshold=args.threshold,
@@ -260,7 +291,7 @@ if __name__ == "__main__":
 
     # Classify
     print("\n" + "=" * 60)
-    print("CLASSIFICATION RESULTS")
+    print(f"CLASSIFICATION RESULTS (Strategy: {args.strategy.upper()})")
     print("=" * 60)
 
     results = classifier.predict(texts, return_probs=args.verbose)
@@ -268,8 +299,8 @@ if __name__ == "__main__":
         results = [results]
 
     for text, result in zip(texts, results):
-        label = "🚫 TOXIC" if result["label"] == 1 else "✅ CLEAN"
-        print(f"\n{label} (conf: {result['confidence']:.2%})")
+        label = "TOXIC" if result["label"] == 1 else "CLEAN"
+        print(f"\n[{label}] (conf: {result['confidence']:.2%})")
         print(f"  \"{text[:80]}{'...' if len(text) > 80 else ''}\"")
         if args.verbose:
-            print(f"  Phase2: {result['prob_phase2']:.4f}, Phase4: {result['prob_phase4']:.4f}")
+            print(f"  Phase2: {result['prob_phase2']:.4f}, Coevo: {result['prob_coevo']:.4f}")
