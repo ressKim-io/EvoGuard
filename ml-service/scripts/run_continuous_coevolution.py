@@ -76,7 +76,7 @@ class ContinuousConfig:
     # 공격 설정
     attack_batch_size: int = 150
     attack_variants: int = 15
-    max_attack_variants: int = 40  # 공격 강화 시 최대값
+    max_attack_variants: int = 80  # 공격 강화 시 최대값
 
     # 공격-방어 균형 (GAN 스타일)
     attack_defense_ratio: int = 1  # N번 공격 후 1번 방어
@@ -86,7 +86,7 @@ class ContinuousConfig:
     original_sample_size: int = 2000
 
     # 모델
-    base_model_path: Path = field(default_factory=lambda: Path("models/phase2-combined/best_model"))
+    base_model_path: Path = field(default_factory=lambda: Path("models/phase2-slang-enhanced"))
 
 
 @dataclass
@@ -549,7 +549,17 @@ class ContinuousCoevolution:
                 logger.error(f"Cycle failed: {e}", exc_info=True)
                 await asyncio.sleep(1)
 
+        self._save_model()
         self._print_summary()
+
+    def _save_model(self):
+        """Save trained model."""
+        save_path = Path("models/coevolution-latest")
+        save_path.mkdir(parents=True, exist_ok=True)
+
+        self._model.save_pretrained(save_path)
+        self._tokenizer.save_pretrained(save_path)
+        logger.info(f"[SAVE] Model saved to {save_path}")
 
     def _print_summary(self):
         """Print final summary."""
@@ -562,6 +572,7 @@ class ContinuousCoevolution:
         print(f"Total time: {elapsed/60:.1f} minutes")
         print(f"Retrains: {self._retrain_count}")
         print(f"GPU time: {self._total_gpu_time:.1f}s ({self._total_gpu_time/elapsed*100:.1f}%)")
+        print(f"Model saved: models/coevolution-latest")
 
         if self._history:
             evasions = [s.evasion_rate for s in self._history]
