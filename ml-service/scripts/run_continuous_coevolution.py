@@ -41,6 +41,12 @@ PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 sys.path.insert(0, str(PROJECT_ROOT.parent))
 
+from ml_service.attacker.slang_dictionary import (
+    evolve_attack_corpus,
+    get_all_slang,
+    generate_variants,
+)
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -117,6 +123,10 @@ class ContinuousCoevolution:
         self._convergence_count = 0  # 연속 수렴 횟수
         self._history: list[CycleStats] = []
         self._start_time = None
+
+        # 슬랭 기반 공격 큐
+        self._slang_attack_queue: list[dict] = []
+        self._slang_evasion_count = 0  # 슬랭 탐지 우회 누적
 
         # 시그널 핸들러
         signal.signal(signal.SIGINT, self._handle_signal)
@@ -195,6 +205,23 @@ class ContinuousCoevolution:
 
         self._classifier = Classifier(self._model, self._tokenizer, self._device, self.config.use_amp)
         logger.info(f"Model loaded on {self._device}")
+
+        # 초기 슬랭 공격 큐 채우기
+        self._initialize_slang_attacks()
+
+    def _initialize_slang_attacks(self):
+        """슬랭 사전에서 초기 공격 표현 로드."""
+        all_slang = get_all_slang()
+        for word in all_slang:
+            variants = generate_variants(word, num_variants=3)
+            for variant in variants:
+                self._slang_attack_queue.append({
+                    "text": variant,
+                    "label": 1,
+                    "source": "slang_init",
+                    "original": word,
+                })
+        logger.info(f"[INIT] 슬랭 사전에서 {len(self._slang_attack_queue)}개 공격 표현 로드")
 
     def _run_attack(self) -> tuple[float, list]:
         """Run attack phase."""
@@ -348,7 +375,7 @@ class ContinuousCoevolution:
         return False
 
     def _strengthen_attack(self):
-        """Strengthen attack when model converges."""
+        """Strengthen attack when model converges - 슬랭 사전으로 진화."""
         old_variants = self.config.attack_variants
         self.config.attack_variants = min(
             self.config.attack_variants + 5,
@@ -357,12 +384,69 @@ class ContinuousCoevolution:
         self._convergence_count = 0
         logger.info(f"[EVOLVE] Attack variants: {old_variants} → {self.config.attack_variants}")
 
+        # 슬랭 사전에서 새로운 공격 표현 생성
+        last_evasion = self._history[-1].evasion_rate if self._history else 0.1
+        new_attack_samples = evolve_attack_corpus(
+            current_evasion_rate=last_evasion,
+            blocked_strategies=None,
+        )
+
+        if new_attack_samples:
+            logger.info(f"[EVOLVE] 슬랭 사전에서 {len(new_attack_samples)}개 새 공격 표현 추가")
+            self._slang_attack_queue.extend(new_attack_samples)
+
+    def _run_slang_attack(self) -> tuple[float, list]:
+        """슬랭 사전 기반 공격 실행."""
+        if not self._slang_attack_queue:
+            return 0.0, []
+
+        # 큐에서 최대 50개 가져오기
+        samples = self._slang_attack_queue[:50]
+        self._slang_attack_queue = self._slang_attack_queue[50:]
+
+        texts = [s["text"] for s in samples]
+        predictions = self._classifier.predict(texts)
+
+        evasions = []
+        for sample, pred in zip(samples, predictions):
+            expected_label = sample["label"]
+            if pred["label"] != expected_label:
+                # 슬랭이 탐지 우회함 - 방어 강화 필요
+                evasions.append({
+                    "original_text": sample.get("original", sample["text"]),
+                    "variant_text": sample["text"],
+                    "strategy_name": sample.get("source", "slang_evolution"),
+                    "original_label": expected_label,
+                    "model_prediction": pred["label"],
+                    "model_confidence": pred["confidence"],
+                    "is_evasion": True,
+                })
+
+        evasion_rate = len(evasions) / len(samples) if samples else 0
+        logger.info(f"[SLANG] {len(evasions)}/{len(samples)} 슬랭 표현 탐지 우회 ({evasion_rate:.1%})")
+
+        return evasion_rate, evasions
+
     async def run_cycle(self) -> CycleStats:
         """Run one cycle (attack → decide → maybe retrain)."""
         self._cycle_num += 1
 
         # Attack phase
         evasion_rate, failed_samples = self._run_attack()
+
+        # 슬랭 공격도 실행 (큐에 있으면)
+        if self._slang_attack_queue:
+            slang_evasion, slang_fails = self._run_slang_attack()
+            if slang_fails:
+                # 슬랭 탐지 실패를 샘플에 변환하여 추가
+                for fail in slang_fails:
+                    class SlangSample:
+                        def __init__(self, data):
+                            self.variant_text = data["variant_text"]
+                            self.original_text = data["original_text"]
+                            self.original_label = data["original_label"]
+                    failed_samples.append(SlangSample(fail))
+                self._slang_evasion_count += len(slang_fails)
 
         # Accumulate samples
         if failed_samples:
