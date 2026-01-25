@@ -26,13 +26,13 @@ nohup python scripts/run_continuous_coevolution.py --max-cycles 100 > logs/coevo
 
 ---
 
-## 현재 최고 성능 모델
+## 현재 최고 성능 모델 (2026-01-25)
 
-| 모델 | F1 Score | 경로 |
-|------|----------|------|
-| **앙상블 (P2+P4)** | **0.9594** | `ensemble_classifier.py` |
-| Phase 2 Combined | 0.9597 | `models/phase2-combined/` |
-| Phase 4 Augmented | 0.9580 | `models/phase4-augmented/` |
+| 모델 | F1 Score | FP | FN | 경로 |
+|------|----------|----|----|------|
+| **AND 앙상블 (P2+Coevo)** | **0.9696** | **60** | 168 | `ensemble_classifier.py` |
+| Phase 2 Combined | 0.9675 | 80 | 164 | `models/phase2-combined/` |
+| Coevolution Latest | 0.9245 | 611 | 8 | `models/coevolution-latest/` |
 
 ---
 
@@ -209,24 +209,50 @@ nvidia-smi  # GPU 메모리 해제 확인
 
 ---
 
-## 파일 구조
+## 파일 구조 (2026-01-25 정리 후)
 
 ```
 ml-service/
 ├── scripts/
 │   ├── run_continuous_coevolution.py  # 연속 공진화 (권장)
 │   ├── run_optimized_coevolution.py   # 시간 제한 공진화
+│   ├── cleanup_models.py              # 모델 정리 (--dry-run/--execute)
+│   ├── model_version_manager.py       # 버전 관리 (save/list/prune/restore)
 │   ├── phase1_deobfuscation.py        # Phase 1
 │   ├── phase2_combined_data.py        # Phase 2 (최고 성능)
 │   ├── phase3_large_model.py          # Phase 3
 │   ├── phase4_augmented.py            # Phase 4
 │   └── phase5_cnn_enhanced.py         # Phase 5
 ├── models/
-│   ├── phase2-combined/               # 현재 최고 성능
-│   ├── phase4-augmented/
-│   └── coevolution-optimized/         # 공진화 결과
+│   ├── phase2-combined/               # 프로덕션 (F1: 0.9675)
+│   ├── phase2-slang-enhanced/         # 슬랭 강화 베이스
+│   ├── phase4-augmented/              # 프로덕션 백업
+│   ├── coevolution-latest/            # 공진화 최신 (F1: 0.9245)
+│   ├── coevolution/versions/          # 버전 관리 (최근 3개)
+│   ├── archive/                       # 압축된 실험 모델
+│   └── MODEL_REGISTRY.json            # 모델 레지스트리
 ├── logs/
 │   └── coevolution_*.log              # 학습 로그
 └── data/korean/
     └── coevolution_continuous_history.json  # 히스토리
 ```
+
+---
+
+## 버전 관리 명령어
+
+```bash
+# 현재 coevolution-latest를 버전으로 저장
+python scripts/model_version_manager.py save --tag stable
+
+# 저장된 버전 목록
+python scripts/model_version_manager.py list
+
+# 오래된 버전 삭제 (최근 3개만 유지)
+python scripts/model_version_manager.py prune --keep 3
+
+# 특정 버전 복원
+python scripts/model_version_manager.py restore <version_name>
+```
+
+> 학습 완료 시 자동으로 버전 스냅샷 생성됨 (run_continuous_coevolution.py)

@@ -96,11 +96,13 @@
 | 항목 | 상태 | 관련 문서 |
 |------|------|-----------|
 | MLflow 실험 추적 | ✅ | `py-05-mlflow.md`, `dev-05-mlops-local.md` |
-| 모델 레지스트리 | ✅ | `05-MLOPS.md` |
+| 모델 레지스트리 | ✅ | `05-MLOPS.md`, `MODEL_REGISTRY.json` |
 | 데이터 버전 관리 (DVC) | ✅ | `.dvc/config` |
 | Docker Compose MLOps | ✅ | `infra/docker-compose.yml` |
 | Feature Store | ✅ | `11-FEATURE_STORE.md` |
 | 모델 모니터링 | ✅ | `12-MODEL_MONITORING.md` |
+| 모델 버전 관리 | ✅ | `scripts/model_version_manager.py` |
+| 모델 정리 자동화 | ✅ | `scripts/cleanup_models.py` |
 
 ### MLOps 성숙도 단계
 1. **Level 0**: 수동 프로세스
@@ -165,6 +167,12 @@
 10. ✅ 보안 강화
 11. ✅ CONTRIBUTING.md
 
+### Phase 5: ML 모델 최적화 ✅
+12. ✅ AND 앙상블 모델 (F1: 0.9696)
+13. ✅ 슬랭 강화 공진화 500 사이클
+14. ✅ 모델 정리 (33GB → 18GB, 15GB 절약)
+15. ✅ 모델 버전 관리 시스템 구축
+
 ---
 
 ## 참고 자료
@@ -181,4 +189,4 @@
 
 ---
 
-*마지막 업데이트: 2026-01-19*
+*마지막 업데이트: 2026-01-25*

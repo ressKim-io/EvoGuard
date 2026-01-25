@@ -159,4 +159,39 @@ training/
 ├── auto_retrain.py        # 자동 재학습 트리거
 ├── train.py               # 학습 엔트리포인트
 └── evaluate_and_deploy.py # 평가 & 배포
+
+scripts/
+├── cleanup_models.py         # 모델 정리 (--dry-run/--execute)
+├── model_version_manager.py  # 버전 관리 (save/list/prune/restore)
+└── run_continuous_coevolution.py  # 연속 공진화 학습
 ```
+
+## 모델 버전 관리 (2026-01-25 추가)
+
+### 정리 스크립트
+```bash
+# 삭제 대상 확인
+python scripts/cleanup_models.py --dry-run
+
+# 실제 삭제 실행
+python scripts/cleanup_models.py --execute
+```
+
+### 버전 관리
+```bash
+# 현재 coevolution-latest를 버전으로 저장
+python scripts/model_version_manager.py save --tag stable
+
+# 저장된 버전 목록
+python scripts/model_version_manager.py list
+
+# 오래된 버전 삭제 (최근 3개만 유지)
+python scripts/model_version_manager.py prune --keep 3
+
+# 특정 버전 복원
+python scripts/model_version_manager.py restore v_20260125_054518_initial
+```
+
+### 모델 레지스트리
+- 위치: `ml-service/models/MODEL_REGISTRY.json`
+- 프로덕션 모델, 앙상블 설정, 아카이브 정보 포함

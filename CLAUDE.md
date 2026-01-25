@@ -78,17 +78,31 @@ python scripts/run_optimized_coevolution.py --hours 4
 | `ml-service/scripts/error_analysis.py` | FP/FN 에러 분석 |
 | `ml-service/scripts/augment_data.py` | 데이터 증강 |
 | `ml-service/scripts/retrain_from_samples.py` | 실패 샘플로 재학습 |
+| `ml-service/scripts/cleanup_models.py` | 모델 정리 (--dry-run/--execute) |
+| `ml-service/scripts/model_version_manager.py` | 버전 관리 (save/list/prune/restore) |
 
 ---
 
 ## 주요 모델 경로
-| 모델 | 경로 |
-|------|------|
-| 앙상블 추론 | `ml-service/src/ml_service/inference/ensemble_classifier.py` |
-| Phase 2 | `ml-service/models/phase2-combined/` |
-| Coevolution Latest | `ml-service/models/coevolution-latest/` |
-| Phase 4 (증강) | `ml-service/models/phase4-augmented/` |
-| 학습 결과 | `ml-service/models/TRAINING_RESULTS.md` |
+
+```
+models/
+├── phase2-combined/          # 프로덕션 (F1: 0.9675)
+├── phase2-slang-enhanced/    # 슬랭 강화 베이스
+├── phase4-augmented/         # 프로덕션 백업
+├── coevolution-latest/       # 공진화 최신
+├── coevolution/versions/     # 공진화 버전 (최근 3개)
+├── archive/                  # 압축된 실험 모델
+└── MODEL_REGISTRY.json       # 모델 레지스트리
+```
+
+| 모델 | 경로 | 설명 |
+|------|------|------|
+| 앙상블 추론 | `ml-service/src/ml_service/inference/ensemble_classifier.py` | AND 앙상블 |
+| Phase 2 | `ml-service/models/phase2-combined/` | 단일 최고 성능 |
+| Coevolution Latest | `ml-service/models/coevolution-latest/` | 공진화 최신 |
+| 레지스트리 | `ml-service/models/MODEL_REGISTRY.json` | 모델 목록 |
+| 학습 결과 | `ml-service/models/TRAINING_RESULTS.md` | 성능 기록 |
 
 ---
 

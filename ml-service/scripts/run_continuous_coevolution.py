@@ -553,13 +553,36 @@ class ContinuousCoevolution:
         self._print_summary()
 
     def _save_model(self):
-        """Save trained model."""
+        """Save trained model and create version snapshot."""
         save_path = Path("models/coevolution-latest")
         save_path.mkdir(parents=True, exist_ok=True)
 
         self._model.save_pretrained(save_path)
         self._tokenizer.save_pretrained(save_path)
         logger.info(f"[SAVE] Model saved to {save_path}")
+
+        # 버전 스냅샷 생성 (model_version_manager 사용)
+        try:
+            import subprocess
+            result = subprocess.run(
+                ["python", "scripts/model_version_manager.py", "save", "--tag", f"cycle{self._cycle_num}"],
+                capture_output=True,
+                text=True,
+                cwd=PROJECT_ROOT,
+            )
+            if result.returncode == 0:
+                logger.info(f"[VERSION] Snapshot saved: cycle{self._cycle_num}")
+            else:
+                logger.warning(f"[VERSION] Failed to save snapshot: {result.stderr}")
+
+            # 오래된 버전 정리 (최근 3개만 유지)
+            subprocess.run(
+                ["python", "scripts/model_version_manager.py", "prune", "--keep", "3"],
+                capture_output=True,
+                cwd=PROJECT_ROOT,
+            )
+        except Exception as e:
+            logger.warning(f"[VERSION] Version management failed: {e}")
 
     def _print_summary(self):
         """Print final summary."""
