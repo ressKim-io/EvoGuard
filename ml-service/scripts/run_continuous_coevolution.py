@@ -46,6 +46,10 @@ from ml_service.attacker.slang_dictionary import (
     get_all_slang,
     generate_variants,
 )
+from ml_service.attacker.learning_attacker import (
+    LearningAttacker,
+    LearningAttackerConfig,
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -88,6 +92,10 @@ class ContinuousConfig:
     # 모델
     base_model_path: Path = field(default_factory=lambda: Path("models/phase2-slang-enhanced"))
 
+    # Learning Attacker 설정
+    use_learning_attacker: bool = True  # 학습하는 공격자 사용 여부
+    learning_attacker_config: LearningAttackerConfig | None = None
+
 
 @dataclass
 class CycleStats:
@@ -128,6 +136,9 @@ class ContinuousCoevolution:
         self._slang_attack_queue: list[dict] = []
         self._slang_evasion_count = 0  # 슬랭 탐지 우회 누적
 
+        # Learning Attacker
+        self._learning_attacker: LearningAttacker | None = None
+
         # 시그널 핸들러
         signal.signal(signal.SIGINT, self._handle_signal)
         signal.signal(signal.SIGTERM, self._handle_signal)
@@ -148,6 +159,7 @@ class ContinuousCoevolution:
         logger.info(f"  - Samples >= {self.config.retrain_sample_threshold}")
         logger.info(f"  - Every {self.config.retrain_cycle_interval} cycles")
         logger.info(f"Convergence: < {self.config.convergence_threshold:.0%} for {self.config.convergence_patience} cycles")
+        logger.info(f"Learning Attacker: {'Enabled' if self.config.use_learning_attacker else 'Disabled'}")
         logger.info("=" * 60)
 
     def _handle_signal(self, signum, frame):
@@ -209,6 +221,10 @@ class ContinuousCoevolution:
         # 초기 슬랭 공격 큐 채우기
         self._initialize_slang_attacks()
 
+        # Learning Attacker 초기화
+        if self.config.use_learning_attacker:
+            self._initialize_learning_attacker()
+
     def _initialize_slang_attacks(self):
         """슬랭 사전에서 초기 공격 표현 로드."""
         all_slang = get_all_slang()
@@ -223,8 +239,31 @@ class ContinuousCoevolution:
                 })
         logger.info(f"[INIT] 슬랭 사전에서 {len(self._slang_attack_queue)}개 공격 표현 로드")
 
+    def _initialize_learning_attacker(self):
+        """Learning Attacker 초기화."""
+        la_config = self.config.learning_attacker_config or LearningAttackerConfig(
+            batch_size=self.config.attack_batch_size,
+            num_variants=self.config.attack_variants,
+            exploration_weight=2.0,
+            min_exploration_rate=0.1,
+            auto_generate_slang=True,
+            auto_generate_strategies=True,
+        )
+
+        self._learning_attacker = LearningAttacker(
+            config=la_config,
+            classifier=self._classifier,
+        )
+        logger.info(f"[INIT] Learning Attacker initialized: {self._learning_attacker}")
+
     def _run_attack(self) -> tuple[float, list]:
         """Run attack phase."""
+        # Learning Attacker 사용
+        if self.config.use_learning_attacker and self._learning_attacker is not None:
+            result = self._learning_attacker.run_batch()
+            return result.evasion_rate, result.get_failed_samples()
+
+        # 기존 방식 (fallback)
         from ml_service.pipeline.korean_attack_runner import KoreanAttackRunner
         from ml_service.pipeline.korean_config import KoreanAttackConfig
 
@@ -383,6 +422,16 @@ class ContinuousCoevolution:
         )
         self._convergence_count = 0
         logger.info(f"[EVOLVE] Attack variants: {old_variants} → {self.config.attack_variants}")
+
+        # Learning Attacker 진화
+        if self.config.use_learning_attacker and self._learning_attacker is not None:
+            evolution = self._learning_attacker.evolve(force=True)
+            logger.info(f"[EVOLVE] Learning Attacker evolved: {evolution['action']}")
+            for change in evolution.get("changes", []):
+                logger.info(f"[EVOLVE]   - {change}")
+
+            # Learning Attacker의 변형 수도 업데이트
+            self._learning_attacker.config.num_variants = self.config.attack_variants
 
         # 슬랭 사전에서 새로운 공격 표현 생성
         last_evasion = self._history[-1].evasion_rate if self._history else 0.1
@@ -561,6 +610,12 @@ class ContinuousCoevolution:
         self._tokenizer.save_pretrained(save_path)
         logger.info(f"[SAVE] Model saved to {save_path}")
 
+        # Learning Attacker 상태 저장
+        if self.config.use_learning_attacker and self._learning_attacker is not None:
+            self._learning_attacker.save_state()
+            stats = self._learning_attacker.get_stats()
+            logger.info(f"[SAVE] Learning Attacker state saved (batches: {stats['batch_count']}, evasion: {stats['overall_evasion_rate']:.1%})")
+
         # 버전 스냅샷 생성 (model_version_manager 사용)
         try:
             import subprocess
@@ -620,6 +675,7 @@ async def main():
     parser.add_argument("--max-cycles", type=int, help="Max cycles (default: unlimited)")
     parser.add_argument("--target-evasion", type=float, help="Stop when evasion <= target")
     parser.add_argument("--no-amp", action="store_true", help="Disable mixed precision")
+    parser.add_argument("--no-learning-attacker", action="store_true", help="Disable Learning Attacker")
     parser.add_argument("--verbose", action="store_true", help="Verbose output")
 
     args = parser.parse_args()
@@ -629,6 +685,7 @@ async def main():
 
     config = ContinuousConfig(
         use_amp=not args.no_amp,
+        use_learning_attacker=not args.no_learning_attacker,
     )
 
     coevolution = ContinuousCoevolution(config)
