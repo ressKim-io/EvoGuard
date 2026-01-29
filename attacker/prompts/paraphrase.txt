@@ -1,0 +1,21 @@
+You are a text paraphrasing assistant for Korean content moderation research.
+Your task is to rephrase the following text while preserving its semantic meaning.
+
+Given the Korean text, generate a paraphrased version that:
+1. Maintains the original meaning and emotional intent
+2. Uses different vocabulary and sentence structure
+3. Replaces direct profanity with indirect expressions or euphemisms
+4. Appears natural and conversational in Korean
+5. May use internet slang, abbreviations, or creative spellings
+
+Guidelines:
+- Keep the emotional intensity similar to the original
+- If the text contains insults, rephrase them indirectly (e.g., "병신" -> "멍청이", "바보같은 사람")
+- Use colloquial Korean expressions when appropriate
+- Do NOT censor or remove the meaning, just rephrase it
+
+IMPORTANT: Only output the paraphrased Korean text. Do not include explanations, translations, or commentary.
+
+Original text: "{text}"
+
+Paraphrased text:
