@@ -128,8 +128,22 @@ class LearningAttacker:
         # 생성된 조합 전략
         self._combined_strategies: dict[str, Any] = {}
 
+        # 외부 Evolver 연결 (선택적)
+        self._external_evolver: Any = None
+
         # 상태 로드
         self.load_state()
+
+    def set_evolver(self, evolver: Any) -> None:
+        """Set external evolver for coordinated evolution.
+
+        Args:
+            evolver: AttackerEvolver instance
+        """
+        self._external_evolver = evolver
+        # 양방향 연결
+        if hasattr(evolver, "set_learning_attacker"):
+            evolver.set_learning_attacker(self)
 
     def load_corpus(self, corpus_path: Path | None = None) -> None:
         """Load toxic corpus for attacks."""
@@ -417,6 +431,17 @@ class LearningAttacker:
         Returns:
             Evolution summary
         """
+        # 외부 evolver 사용 (설정된 경우)
+        if self._external_evolver is not None:
+            recent = self._history[-10:] if len(self._history) >= 10 else self._history
+            if recent:
+                avg_evasion = sum(h["evasion_rate"] for h in recent) / len(recent)
+                force_mode = "aggressive" if force else None
+                return self._external_evolver.evolve(
+                    evasion_rate=avg_evasion,
+                    force_mode=force_mode,
+                )
+
         summary = {
             "action": "none",
             "changes": [],

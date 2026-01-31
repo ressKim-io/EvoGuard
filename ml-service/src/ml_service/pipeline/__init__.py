@@ -44,6 +44,13 @@ from ml_service.pipeline.korean_attack_runner import (
     KoreanAttackResult,
     run_korean_attack_test,
 )
+from ml_service.pipeline.hard_negative_miner import (
+    HardNegativeMiner,
+    HardNegativeMinerConfig,
+    HardSample,
+    BoundarySampleCollector,
+    ErrorSampleCollector,
+)
 
 __all__ = [
     # Config
@@ -86,4 +93,10 @@ __all__ = [
     "KoreanBatchResult",
     "KoreanAttackResult",
     "run_korean_attack_test",
+    # Hard Negative Miner
+    "HardNegativeMiner",
+    "HardNegativeMinerConfig",
+    "HardSample",
+    "BoundarySampleCollector",
+    "ErrorSampleCollector",
 ]

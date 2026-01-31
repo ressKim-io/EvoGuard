@@ -37,6 +37,12 @@ from ml_service.attacker.learning_attacker import (
     LearningAttacker,
     LearningAttackerConfig,
 )
+from ml_service.attacker.attacker_evolver import (
+    AttackerEvolver,
+    AttackerEvolverConfig,
+    StrategyMutator,
+    SlangEvolver,
+)
 
 __all__ = [
     # Korean strategies
@@ -62,4 +68,9 @@ __all__ = [
     # Learning attacker (orchestrator)
     "LearningAttacker",
     "LearningAttackerConfig",
+    # Attacker evolver
+    "AttackerEvolver",
+    "AttackerEvolverConfig",
+    "StrategyMutator",
+    "SlangEvolver",
 ]
