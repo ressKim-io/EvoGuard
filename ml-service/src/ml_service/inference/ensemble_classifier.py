@@ -5,12 +5,18 @@ F1: 0.9696, FP: 60, FN: 168
 
 AND strategy: Both models must predict toxic for final toxic prediction.
 This reduces false positives while maintaining high detection accuracy.
+
+Supports multiple ensemble strategies:
+- 'and': Both models must predict toxic (low FP) - DEFAULT
+- 'or': Either model predicts toxic (low FN)
+- 'weighted': Weighted average of probabilities
+- 'pmf': PMF (Parallel Model Fusion) with 3 models and meta-learner
 """
 
 import torch
 import torch.nn.functional as F
 from pathlib import Path
-from typing import List, Dict, Union, Tuple, Literal
+from typing import List, Dict, Union, Tuple, Literal, Optional
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 
@@ -208,22 +214,30 @@ class EnsembleClassifier:
 
 def create_ensemble(
     model_dir: str = None,
-    strategy: Literal["and", "or", "weighted"] = "and",
+    strategy: Literal["and", "or", "weighted", "pmf"] = "and",
     weight1: float = 0.6,
     weight2: float = 0.4,
     threshold: float = 0.5,
-) -> EnsembleClassifier:
+    pmf_strategy: str = "meta_learner",
+    device: Optional[str] = None,
+) -> Union["EnsembleClassifier", "PMFEnsemble"]:
     """Factory function to create ensemble classifier.
 
     Args:
         model_dir: Base directory for models (default: ml-service/models)
-        strategy: Ensemble strategy ('and', 'or', 'weighted')
+        strategy: Ensemble strategy ('and', 'or', 'weighted', 'pmf')
+            - 'and': Both Phase2 + Coevo must predict toxic (low FP)
+            - 'or': Either model predicts toxic (low FN)
+            - 'weighted': Weighted average of Phase2 + Coevo
+            - 'pmf': PMF ensemble with 3 models and meta-learner (highest F1)
         weight1: Weight for Phase 2 model (only for 'weighted')
         weight2: Weight for Coevolution model (only for 'weighted')
         threshold: Classification threshold
+        pmf_strategy: Strategy for PMF ensemble ('meta_learner', 'weighted_avg', etc.)
+        device: Device to use ('cuda', 'cpu', or None for auto)
 
     Returns:
-        EnsembleClassifier instance
+        EnsembleClassifier or PMFEnsemble instance
     """
     if model_dir is None:
         # Try to find models directory
@@ -242,6 +256,16 @@ def create_ensemble(
 
     model_dir = Path(model_dir)
 
+    # Use PMF ensemble if requested
+    if strategy == "pmf":
+        from ml_service.inference.pmf_ensemble import create_pmf_ensemble
+        return create_pmf_ensemble(
+            model_dir=str(model_dir),
+            strategy=pmf_strategy,
+            threshold=threshold,
+            device=device,
+        )
+
     return EnsembleClassifier(
         model1_path=str(model_dir / "phase2-combined" / "best_model"),
         model2_path=str(model_dir / "coevolution-latest"),
@@ -249,7 +273,12 @@ def create_ensemble(
         weight1=weight1,
         weight2=weight2,
         threshold=threshold,
+        device=device,
     )
+
+
+# Type alias for backwards compatibility
+PMFEnsemble = None  # Will be imported lazily when needed
 
 
 # CLI interface
@@ -260,8 +289,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ensemble toxic text classifier")
     parser.add_argument("texts", nargs="*", help="Texts to classify")
     parser.add_argument("--file", "-f", help="File with texts (one per line)")
-    parser.add_argument("--strategy", "-s", choices=["and", "or", "weighted"], default="and",
-                        help="Ensemble strategy (default: and)")
+    parser.add_argument("--strategy", "-s", choices=["and", "or", "weighted", "pmf"], default="and",
+                        help="Ensemble strategy (default: and, use 'pmf' for 3-model ensemble)")
+    parser.add_argument("--pmf-strategy", choices=["meta_learner", "weighted_avg", "voting", "and", "or"],
+                        default="meta_learner", help="PMF sub-strategy (when --strategy=pmf)")
     parser.add_argument("--threshold", "-t", type=float, default=0.5, help="Classification threshold")
     parser.add_argument("--weight1", type=float, default=0.6, help="Phase 2 weight (for weighted strategy)")
     parser.add_argument("--weight2", type=float, default=0.4, help="Coevolution weight (for weighted strategy)")
@@ -279,6 +310,7 @@ if __name__ == "__main__":
         print("       python ensemble_classifier.py -f input.txt")
         print("       python ensemble_classifier.py --strategy or 'text'  # low FN")
         print("       python ensemble_classifier.py --strategy and 'text'  # low FP (default)")
+        print("       python ensemble_classifier.py --strategy pmf 'text'  # 3-model ensemble (highest F1)")
         sys.exit(1)
 
     # Create classifier
@@ -287,6 +319,7 @@ if __name__ == "__main__":
         weight1=args.weight1,
         weight2=args.weight2,
         threshold=args.threshold,
+        pmf_strategy=args.pmf_strategy if args.strategy == "pmf" else "meta_learner",
     )
 
     # Classify

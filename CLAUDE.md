@@ -31,13 +31,16 @@ HardNegativeMiner (어려운 샘플 집중 학습):
 ### 현재 최고 성능
 | 모델 | F1 Score | FP | FN | 용도 |
 |------|----------|----|----|------|
+| **PMF 앙상블 (3모델)** | **0.975~0.98** | **50~55** | 150~160 | 목표 (학습 필요) |
 | **앙상블 (P2+Coevo AND)** | **0.9696** | **60** | 168 | 프로덕션 권장 |
 | Phase 2 Combined | 0.9675 | 80 | 164 | 단일 모델 최고 |
 | Coevolution Latest | 0.9245 | 611 | 8 | 공격 방어 특화 (FN↓) |
 | Phase 5 CNN | 0.8946 | 419 | 362 | 실험 |
 
 ### 베이스 모델
-- `beomi/KcELECTRA-base-v2022` (한국어 ELECTRA)
+- `beomi/KcELECTRA-base-v2022` (한국어 ELECTRA, 현재 베이스)
+- `klue/bert-base` (범용 한국어 BERT, PMF용)
+- `monologg/koelectra-base-v3-discriminator` (KoELECTRA v3, PMF용)
 
 ### 학습 데이터셋 (한국어)
 - **KOTOX**: Korean Toxic 데이터셋
@@ -57,6 +60,8 @@ HardNegativeMiner (어려운 샘플 집중 학습):
 | 3 | `ml-service/scripts/phase3_large_model.py` | 대형 모델 실험 |
 | 4 | `ml-service/scripts/phase4_augmented.py` | 에러 기반 증강 학습 |
 | 5 | `ml-service/scripts/phase5_cnn_enhanced.py` | CNN 레이어 추가 |
+| PMF | `ml-service/scripts/train_multi_model.py` | 3모델 병렬 학습 |
+| PMF | `ml-service/scripts/train_meta_learner.py` | 메타러너 학습 |
 
 ### MLOps 자동화 (반복 실행)
 
@@ -104,13 +109,19 @@ models/
 ├── phase4-augmented/         # 프로덕션 백업
 ├── coevolution-latest/       # 공진화 최신
 ├── coevolution/versions/     # 공진화 버전 (최근 3개)
+├── pmf/                      # PMF 앙상블 (3모델)
+│   ├── kcelectra/            # KcELECTRA 모델
+│   ├── klue-bert/            # KLUE-BERT 모델
+│   ├── koelectra-v3/         # KoELECTRA v3 모델
+│   └── meta_learner.pkl      # 메타러너 (XGBoost)
 ├── archive/                  # 압축된 실험 모델
 └── MODEL_REGISTRY.json       # 모델 레지스트리
 ```
 
 | 모델 | 경로 | 설명 |
 |------|------|------|
-| 앙상블 추론 | `ml-service/src/ml_service/inference/ensemble_classifier.py` | AND 앙상블 |
+| 앙상블 추론 | `ml-service/src/ml_service/inference/ensemble_classifier.py` | AND/PMF 앙상블 |
+| PMF 앙상블 | `ml-service/src/ml_service/inference/pmf_ensemble.py` | 3모델 앙상블 |
 | Phase 2 | `ml-service/models/phase2-combined/` | 단일 최고 성능 |
 | Coevolution Latest | `ml-service/models/coevolution-latest/` | 공진화 최신 |
 | 레지스트리 | `ml-service/models/MODEL_REGISTRY.json` | 모델 목록 |
@@ -145,6 +156,7 @@ models/
 - **2026-01-27**: 연속 공진화 100 사이클 완료 (evasion 19.9% → 0.3%, 재학습 36회, 50분)
 - **2026-02-01**: 균형 공진화 시스템 구현 (AttackerEvolver, HardNegativeMiner, BalancedCoevolution)
 - **2026-02-01**: 균형 공진화 10 사이클 테스트 완료 (evasion 29.5% → 3.2%, 5.2분)
+- **2026-02-01**: PMF 앙상블 구현 완료 (3모델 병렬 학습 + 메타러너, 학습 필요)
 
 ## 참고 문서
 > 아래 문서들은 필요시 `@파일경로`로 로드하세요
