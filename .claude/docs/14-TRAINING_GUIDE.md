@@ -6,9 +6,12 @@
 
 ```bash
 cd /home/resshome/project/EvoGuard/ml-service
-
-# 연속 공진화 학습 (권장)
 source .venv/bin/activate
+
+# 균형 공진화 학습 (권장) - 공격자/방어자 양쪽 자동 진화
+nohup python scripts/run_balanced_coevolution.py --max-cycles 100 > logs/balanced_$(date +%Y%m%d_%H%M%S).log 2>&1 &
+
+# 연속 공진화 학습 (기존 방식)
 nohup python scripts/run_continuous_coevolution.py --max-cycles 100 > logs/coevolution_$(date +%Y%m%d_%H%M%S).log 2>&1 &
 ```
 
@@ -18,11 +21,20 @@ nohup python scripts/run_continuous_coevolution.py --max-cycles 100 > logs/coevo
 
 | 상황 | 스크립트 | 명령어 |
 |------|----------|--------|
-| **일반 학습** | `run_continuous_coevolution.py` | `--max-cycles 100` |
-| **목표 달성까지** | `run_continuous_coevolution.py` | `--target-evasion 0.03` |
-| **무한 실행** | `run_continuous_coevolution.py` | (옵션 없음, Ctrl+C로 중단) |
+| **균형 공진화 (권장)** | `run_balanced_coevolution.py` | `--max-cycles 100` |
+| **목표 달성까지** | `run_balanced_coevolution.py` | `--target-evasion 0.03` |
+| **연속 공진화** | `run_continuous_coevolution.py` | `--max-cycles 100` |
 | **시간 제한** | `run_optimized_coevolution.py` | `--hours 4` |
 | **단계별 학습** | `phase1~5_*.py` | 개별 실행 |
+
+### 균형 공진화 vs 연속 공진화
+
+| 기능 | 균형 공진화 | 연속 공진화 |
+|------|-----------|------------|
+| 공격자 자동 진화 | ✅ AttackerEvolver | ❌ 수동 |
+| 어려운 샘플 수집 | ✅ HardNegativeMiner | ❌ 없음 |
+| 균형 구간 추적 | ✅ 5-8% | ❌ 없음 |
+| 가중치 학습 | ✅ FN/FP 가중치 | ❌ 동일 가중치 |
 
 ---
 
@@ -209,12 +221,13 @@ nvidia-smi  # GPU 메모리 해제 확인
 
 ---
 
-## 파일 구조 (2026-01-25 정리 후)
+## 파일 구조 (2026-02-01 업데이트)
 
 ```
 ml-service/
 ├── scripts/
-│   ├── run_continuous_coevolution.py  # 연속 공진화 (권장)
+│   ├── run_balanced_coevolution.py    # 균형 공진화 (권장)
+│   ├── run_continuous_coevolution.py  # 연속 공진화
 │   ├── run_optimized_coevolution.py   # 시간 제한 공진화
 │   ├── cleanup_models.py              # 모델 정리 (--dry-run/--execute)
 │   ├── model_version_manager.py       # 버전 관리 (save/list/prune/restore)
@@ -223,18 +236,27 @@ ml-service/
 │   ├── phase3_large_model.py          # Phase 3
 │   ├── phase4_augmented.py            # Phase 4
 │   └── phase5_cnn_enhanced.py         # Phase 5
+├── src/ml_service/
+│   ├── attacker/
+│   │   ├── attacker_evolver.py        # 공격자 자동 진화
+│   │   ├── learning_attacker.py       # 학습하는 공격자
+│   │   └── ...
+│   └── pipeline/
+│       ├── hard_negative_miner.py     # 어려운 샘플 수집
+│       └── ...
 ├── models/
 │   ├── phase2-combined/               # 프로덕션 (F1: 0.9675)
 │   ├── phase2-slang-enhanced/         # 슬랭 강화 베이스
-│   ├── phase4-augmented/              # 프로덕션 백업
-│   ├── coevolution-latest/            # 공진화 최신 (F1: 0.9245)
+│   ├── coevolution-latest/            # 공진화 최신
 │   ├── coevolution/versions/          # 버전 관리 (최근 3개)
-│   ├── archive/                       # 압축된 실험 모델
 │   └── MODEL_REGISTRY.json            # 모델 레지스트리
 ├── logs/
-│   └── coevolution_*.log              # 학습 로그
+│   ├── balanced_*.log                 # 균형 공진화 로그
+│   └── coevolution_*.log              # 연속 공진화 로그
 └── data/korean/
-    └── coevolution_continuous_history.json  # 히스토리
+    ├── coevolution_balanced_history.json    # 균형 공진화 히스토리
+    ├── coevolution_continuous_history.json  # 연속 공진화 히스토리
+    └── hard_samples.json                    # HNM 수집 샘플
 ```
 
 ---

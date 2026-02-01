@@ -9,14 +9,23 @@
 
 ## 핵심: 한국어 공격-방어 시스템
 
-### 작동 원리
+### 작동 원리 (균형 공진화)
 ```
 ┌─────────────┐                    ┌─────────────┐
-│   Attacker  │ ── evasion>30% ──▶ │  Defender   │ 재학습
+│   Attacker  │ ── evasion>8% ───▶ │  Defender   │ 재학습
 │  (공격자)    │                    │  (방어자)    │
-│             │ ◀── evasion<10% ── │             │ 진화
+│             │ ◀── evasion<5% ─── │             │ 진화
 └─────────────┘                    └─────────────┘
-        └────── 10~30% = 균형 상태 ──────┘
+        └────── 5~8% = 균형 구간 ──────┘
+
+AttackerEvolver (evasion < 5%):
+  - aggressive (<3%): 새 전략 5개, 슬랭 확장, 탐색 +1.0
+  - normal (3-5%): 새 전략 2개, 탐색 +0.3
+
+HardNegativeMiner (어려운 샘플 집중 학습):
+  - FN 가중치 2.0 (독성→정상, 가장 위험)
+  - FP 가중치 1.5 (정상→독성)
+  - 경계 케이스 가중치 1.0 (confidence 0.4~0.6)
 ```
 
 ### 현재 최고 성능
@@ -56,21 +65,24 @@
 ```bash
 cd ml-service && source .venv/bin/activate
 
-# 연속 공진화 (권장) - 트리거 기반, GPU 최적화
-python scripts/run_continuous_coevolution.py --max-cycles 100
+# 균형 공진화 (권장) - 공격자/방어자 양쪽 자동 진화
+python scripts/run_balanced_coevolution.py --max-cycles 100
 
 # 목표 달성까지 실행
-python scripts/run_continuous_coevolution.py --target-evasion 0.03
+python scripts/run_balanced_coevolution.py --target-evasion 0.03
 
-# 시간 제한 실행
-python scripts/run_optimized_coevolution.py --hours 4
+# 연속 공진화 (기존 방식)
+python scripts/run_continuous_coevolution.py --max-cycles 100
+
+# 백그라운드 실행 (SSH 끊김 대비)
+nohup python scripts/run_balanced_coevolution.py --max-cycles 500 > logs/balanced_$(date +%Y%m%d_%H%M%S).log 2>&1 &
 ```
 
-**연속 공진화 특징:**
-- 작업 완료 즉시 다음 사이클 (시간 기반 X)
+**균형 공진화 특징:**
+- 공격자 자동 진화 (evasion < 5%): AttackerEvolver
+- 어려운 샘플 집중 학습: HardNegativeMiner
+- 균형 구간 추적 (5-8%)
 - AMP(Mixed Precision) 적용
-- 트리거 기반 재학습 (evasion>8%, 샘플 축적, 주기적)
-- 수렴 감지 시 공격 자동 강화
 
 ### 분석 및 유틸리티
 | 스크립트 | 설명 |
@@ -131,6 +143,8 @@ models/
 - **AND 앙상블 적용 완료** (F1: 0.9696, FP: 60)
 - 프로덕션 배포 준비 완료
 - **2026-01-27**: 연속 공진화 100 사이클 완료 (evasion 19.9% → 0.3%, 재학습 36회, 50분)
+- **2026-02-01**: 균형 공진화 시스템 구현 (AttackerEvolver, HardNegativeMiner, BalancedCoevolution)
+- **2026-02-01**: 균형 공진화 10 사이클 테스트 완료 (evasion 29.5% → 3.2%, 5.2분)
 
 ## 참고 문서
 > 아래 문서들은 필요시 `@파일경로`로 로드하세요
