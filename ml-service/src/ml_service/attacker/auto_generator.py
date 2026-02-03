@@ -14,11 +14,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
-from ml_service.attacker.korean_strategies import (
+from ml_service.attacker.korean_strategies import KOREAN_ATTACK_STRATEGIES
+from ml_service.attacker.hangul_utils import (
     CHOSEONG,
     JUNGSEONG,
     JONGSEONG,
-    KOREAN_ATTACK_STRATEGIES,
     decompose_syllable,
     compose_syllable,
     is_hangul_syllable,

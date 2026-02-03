@@ -15,9 +15,15 @@ from ml_service.attacker.korean_strategies import (
     get_korean_strategies,
     apply_korean_attack,
     apply_random_korean_attacks,
+)
+from ml_service.attacker.hangul_utils import (
     decompose_syllable,
     compose_syllable,
     extract_choseong,
+    is_hangul_syllable,
+    CHOSEONG,
+    JUNGSEONG,
+    JONGSEONG,
 )
 from ml_service.attacker.adaptive_selector import (
     AdaptiveStrategySelector,
@@ -51,9 +57,14 @@ __all__ = [
     "get_korean_strategies",
     "apply_korean_attack",
     "apply_random_korean_attacks",
+    # Hangul utils
     "decompose_syllable",
     "compose_syllable",
     "extract_choseong",
+    "is_hangul_syllable",
+    "CHOSEONG",
+    "JUNGSEONG",
+    "JONGSEONG",
     # Adaptive selector (UCB1)
     "AdaptiveStrategySelector",
     "StrategyStats",

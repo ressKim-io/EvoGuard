@@ -11,7 +11,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from typing import Any
 
-from ml_service.attacker.korean_strategies import (
+from ml_service.attacker.hangul_utils import (
     CHOSEONG,
     JUNGSEONG,
     JONGSEONG,
