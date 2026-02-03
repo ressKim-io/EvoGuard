@@ -347,11 +347,11 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info(f"Using device: {device}")
 
-    # Find validation file
+    # Find validation file (use standard dataset by default)
     if args.valid_file:
         valid_path = Path(args.valid_file)
     else:
-        valid_path = Path(__file__).parent.parent / "data" / "korean" / "korean_combined_v2_valid.csv"
+        valid_path = Path(__file__).parent.parent / "data" / "korean" / "korean_standard_v1_valid.csv"
 
     if not valid_path.exists():
         logger.error(f"Validation file not found: {valid_path}")

@@ -6,7 +6,10 @@ Trains 3 different Korean transformer models on the same dataset:
 - klue/bert-base: General-purpose Korean BERT
 - monologg/koelectra-base-v3-discriminator: KoELECTRA v3
 
-Each model is fine-tuned on korean_combined_v2.csv and saved to models/pmf/.
+Each model is fine-tuned on korean_standard_v1 dataset and saved to models/pmf/.
+
+Uses standardized training configuration from ml_service.training.standard_config
+for fair and reproducible model comparison.
 """
 
 import argparse
@@ -25,7 +28,16 @@ from torch.utils.data import DataLoader, Dataset
 from torch.cuda.amp import GradScaler, autocast
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from tqdm import tqdm
-from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score, confusion_matrix
+from sklearn.metrics import confusion_matrix
+
+from ml_service.training.standard_config import (
+    STANDARD_CONFIG,
+    PMF_MODELS as STANDARD_PMF_MODELS,
+    get_data_paths,
+    evaluate_model,
+    is_better_model,
+    set_seed,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -90,29 +102,29 @@ class ToxicDataset(Dataset):
         }
 
 
-def load_data(data_dir: Path, use_cached: bool = True):
-    """Load training and validation data."""
-    train_path = data_dir / "korean_combined_v2_train.csv"
-    valid_path = data_dir / "korean_combined_v2_valid.csv"
+def load_data(data_dir: Path | None = None, version: str = "korean_standard_v1"):
+    """Load standardized training and validation data.
 
-    if train_path.exists() and valid_path.exists() and use_cached:
-        logger.info("Loading pre-split train/valid data...")
-        train_df = pd.read_csv(train_path)
-        valid_df = pd.read_csv(valid_path)
-    else:
-        logger.info("Loading and splitting combined data...")
-        combined_path = data_dir / "korean_combined_v2.csv"
-        df = pd.read_csv(combined_path)
-        df = df.dropna().drop_duplicates(subset=["text"]).reset_index(drop=True)
-        df = df.sample(frac=1, random_state=42).reset_index(drop=True)
+    Args:
+        data_dir: Data directory path. If None, uses default.
+        version: Dataset version prefix.
 
-        split_idx = int(len(df) * 0.9)
-        train_df = df[:split_idx]
-        valid_df = df[split_idx:]
+    Returns:
+        Tuple of (train_df, valid_df)
+    """
+    paths = get_data_paths(data_dir, version)
 
-        train_df.to_csv(train_path, index=False)
-        valid_df.to_csv(valid_path, index=False)
+    if not paths["train"].exists():
+        raise FileNotFoundError(
+            f"Standard dataset not found: {paths['train']}\n"
+            "Run: python scripts/create_standard_dataset.py"
+        )
 
+    logger.info(f"Loading standardized dataset: {version}")
+    train_df = pd.read_csv(paths["train"])
+    valid_df = pd.read_csv(paths["valid"])
+
+    logger.info(f"  Train: {len(train_df)}, Valid: {len(valid_df)}")
     return train_df, valid_df
 
 
@@ -233,33 +245,18 @@ def train_model(
                 all_labels.extend(batch["labels"].tolist())
                 all_probs.extend(probs[:, 1].cpu().tolist())
 
-        # Calculate metrics
-        f1 = f1_score(all_labels, all_preds, average="weighted")
-        acc = accuracy_score(all_labels, all_preds)
-        precision = precision_score(all_labels, all_preds, average="weighted")
-        recall = recall_score(all_labels, all_preds, average="weighted")
-        cm = confusion_matrix(all_labels, all_preds)
-
-        tn, fp, fn, tp = cm.ravel()
+        # Calculate metrics using standard evaluation
+        metrics = evaluate_model(all_labels, all_preds, all_probs)
+        metrics["epoch"] = epoch + 1
 
         logger.info(
-            f"Epoch {epoch+1}: loss={avg_loss:.4f}, f1={f1:.4f}, "
-            f"acc={acc:.4f}, FP={fp}, FN={fn}"
+            f"Epoch {epoch+1}: loss={avg_loss:.4f}, f1={metrics['f1_weighted']:.4f}, "
+            f"acc={metrics['accuracy']:.4f}, FP={metrics['fp']}, FN={metrics['fn']}"
         )
 
-        if f1 > best_f1:
-            best_f1 = f1
-            best_metrics = {
-                "f1": float(f1),
-                "accuracy": float(acc),
-                "precision": float(precision),
-                "recall": float(recall),
-                "fp": int(fp),
-                "fn": int(fn),
-                "tp": int(tp),
-                "tn": int(tn),
-                "epoch": epoch + 1,
-            }
+        if is_better_model(metrics, best_metrics):
+            best_f1 = metrics["f1_weighted"]
+            best_metrics = metrics.copy()
 
             # Save best model
             model.save_pretrained(output_dir / "best_model")
@@ -287,7 +284,7 @@ def train_model(
     return results
 
 
-def evaluate_model(config: ModelConfig, valid_df: pd.DataFrame, device: Optional[torch.device] = None):
+def evaluate_trained_model(config: ModelConfig, valid_df: pd.DataFrame, device: Optional[torch.device] = None):
     """Evaluate a trained model."""
     if device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -325,19 +322,14 @@ def evaluate_model(config: ModelConfig, valid_df: pd.DataFrame, device: Optional
             all_labels.extend(batch["labels"].tolist())
             all_probs.extend(probs[:, 1].cpu().tolist())
 
-    f1 = f1_score(all_labels, all_preds, average="weighted")
-    acc = accuracy_score(all_labels, all_preds)
-    cm = confusion_matrix(all_labels, all_preds)
-    tn, fp, fn, tp = cm.ravel()
+    # Use standard evaluation
+    metrics = evaluate_model(all_labels, all_preds, all_probs)
 
-    logger.info(f"  {config.name}: F1={f1:.4f}, Acc={acc:.4f}, FP={fp}, FN={fn}")
+    logger.info(f"  {config.name}: F1={metrics['f1_weighted']:.4f}, Acc={metrics['accuracy']:.4f}, FP={metrics['fp']}, FN={metrics['fn']}")
 
     return {
         "model_name": config.name,
-        "f1": float(f1),
-        "accuracy": float(acc),
-        "fp": int(fp),
-        "fn": int(fn),
+        **metrics,
         "probs": all_probs,
         "preds": all_preds,
         "labels": all_labels,
@@ -348,16 +340,22 @@ def main():
     parser = argparse.ArgumentParser(description="Train multiple models for PMF ensemble")
     parser.add_argument("--models", nargs="+", choices=["kcelectra", "klue-bert", "koelectra-v3", "all"],
                         default=["all"], help="Models to train")
-    parser.add_argument("--epochs", type=int, default=10, help="Number of epochs")
-    parser.add_argument("--batch_size", type=int, default=16, help="Batch size")
-    parser.add_argument("--lr", type=float, default=2e-5, help="Learning rate")
+    parser.add_argument("--epochs", type=int, default=STANDARD_CONFIG.epochs, help="Number of epochs")
+    parser.add_argument("--batch_size", type=int, default=STANDARD_CONFIG.batch_size, help="Batch size")
+    parser.add_argument("--lr", type=float, default=STANDARD_CONFIG.learning_rate, help="Learning rate")
     parser.add_argument("--no-amp", action="store_true", help="Disable AMP")
     parser.add_argument("--evaluate-only", action="store_true", help="Only evaluate existing models")
     parser.add_argument("--data-dir", type=str, default=None, help="Data directory")
+    parser.add_argument("--dataset-version", type=str, default=STANDARD_CONFIG.dataset_version,
+                        help="Dataset version (e.g., korean_standard_v1)")
     args = parser.parse_args()
+
+    # Set seed for reproducibility
+    set_seed(STANDARD_CONFIG.seed)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info(f"Using device: {device}")
+    logger.info(f"Seed: {STANDARD_CONFIG.seed}")
 
     # Determine data directory
     if args.data_dir:
@@ -365,8 +363,9 @@ def main():
     else:
         data_dir = Path(__file__).parent.parent / "data" / "korean"
 
-    # Load data
-    train_df, valid_df = load_data(data_dir)
+    # Load standardized data
+    train_df, valid_df = load_data(data_dir, version=args.dataset_version)
+    logger.info(f"Dataset: {args.dataset_version}")
     logger.info(f"Train: {len(train_df)}, Valid: {len(valid_df)}")
     logger.info(f"Train label distribution: {train_df['label'].value_counts().to_dict()}")
 
@@ -384,7 +383,7 @@ def main():
 
         results = []
         for config in models_to_train:
-            result = evaluate_model(config, valid_df, device)
+            result = evaluate_trained_model(config, valid_df, device)
             if result:
                 results.append(result)
 
@@ -393,7 +392,7 @@ def main():
         logger.info("EVALUATION SUMMARY")
         logger.info("=" * 60)
         for r in results:
-            logger.info(f"  {r['model_name']}: F1={r['f1']:.4f}, FP={r['fp']}, FN={r['fn']}")
+            logger.info(f"  {r['model_name']}: F1={r['f1_weighted']:.4f}, FP={r['fp']}, FN={r['fn']}")
 
         # Save summary
         summary_path = Path("models/pmf/evaluation_summary.json")
