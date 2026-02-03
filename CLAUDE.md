@@ -28,14 +28,20 @@ HardNegativeMiner (어려운 샘플 집중 학습):
   - 경계 케이스 가중치 1.0 (confidence 0.4~0.6)
 ```
 
-### 현재 최고 성능
-| 모델 | F1 Score | FP | FN | 용도 |
-|------|----------|----|----|------|
-| **PMF 앙상블 (3모델)** | **0.975~0.98** | **50~55** | 150~160 | 목표 (학습 필요) |
-| **앙상블 (P2+Coevo AND)** | **0.9696** | **60** | 168 | 프로덕션 권장 |
-| Phase 2 Combined | 0.9675 | 80 | 164 | 단일 모델 최고 |
-| Coevolution Latest | 0.9245 | 611 | 8 | 공격 방어 특화 (FN↓) |
-| Phase 5 CNN | 0.8946 | 419 | 362 | 실험 |
+### 현재 최고 성능 (2026-02-02 공정 평가 완료)
+
+> **✅ 공정 비교 완료**: `korean_standard_v1_test.csv` (6,207 samples)로 모든 모델 평가
+> - 표준 설정: `ml-service/TRAINING_STANDARDS.md` 참조
+> - 평가 결과: `ml-service/models/evaluation_results.json`
+
+| 순위 | 모델 | F1 Score | FP | FN | 비고 |
+|------|------|----------|----|----|------|
+| **1** | **Phase 2 Combined** | **0.9781** | **52** | **84** | 🏆 **최고 성능** |
+| 2 | PMF Meta-Learner | 0.8793 | 367 | 383 | 3모델 앙상블 |
+| 3 | kcelectra (PMF) | 0.8752 | 307 | 475 | 단일 모델 |
+| 4 | PMF Voting | 0.8730 | 284 | 514 | 다수결 |
+| 5 | koelectra-v3 (PMF) | 0.8517 | 249 | 691 | FN 높음 |
+| 6 | klue-bert (PMF) | 0.8397 | 473 | 525 | - |
 
 ### 베이스 모델
 - `beomi/KcELECTRA-base-v2022` (한국어 ELECTRA, 현재 베이스)
@@ -43,10 +49,20 @@ HardNegativeMiner (어려운 샘플 집중 학습):
 - `monologg/koelectra-base-v3-discriminator` (KoELECTRA v3, PMF용)
 
 ### 학습 데이터셋 (한국어)
+
+**표준 데이터셋 (권장):** `korean_standard_v1`
+```
+Train: 38,911 / Valid: 5,796 / Test: 6,207
+포함: KOTOX, BEEP, UnSmile, curse, korean_hate_speech_balanced
+제외: K-HATERS, K-MHaS (라벨 노이즈 문제)
+```
+
+**개별 데이터셋:**
 - **KOTOX**: Korean Toxic 데이터셋
 - **BEEP**: 한국어 혐오표현
 - **UnSmile**: 여성가족부 혐오표현 데이터
 - **욕설 데이터셋**: 한국어 비속어
+- ~~K-HATERS, K-MHaS~~: 제외 (라벨 변환 노이즈로 성능 저하 유발)
 
 ---
 
@@ -151,12 +167,19 @@ models/
 ## 현재 진행 상황
 - Phase 1-5 학습 완료
 - 슬랭 강화 공진화 500 사이클 완료 (evasion 20.5% → 0.0%)
-- **AND 앙상블 적용 완료** (F1: 0.9696, FP: 60)
+- **AND 앙상블 적용 완료** (F1: 0.9696, FP: 60) - *데이터셋 다름, 재평가 필요*
 - 프로덕션 배포 준비 완료
 - **2026-01-27**: 연속 공진화 100 사이클 완료 (evasion 19.9% → 0.3%, 재학습 36회, 50분)
 - **2026-02-01**: 균형 공진화 시스템 구현 (AttackerEvolver, HardNegativeMiner, BalancedCoevolution)
 - **2026-02-01**: 균형 공진화 10 사이클 테스트 완료 (evasion 29.5% → 3.2%, 5.2분)
-- **2026-02-01**: PMF 앙상블 구현 완료 (3모델 병렬 학습 + 메타러너, 학습 필요)
+- **2026-02-01**: PMF 앙상블 구현 완료 (3모델 병렬 학습 + 메타러너)
+- **2026-02-02**: 학습 환경 통일 작업
+  - 표준 데이터셋 생성: `korean_standard_v1` (K-HATERS/K-MHaS 제외)
+  - 표준 설정 모듈: `ml_service.training.standard_config`
+  - 문서: `ml-service/TRAINING_STANDARDS.md`
+- **2026-02-02**: PMF 학습 완료 (kcelectra: 0.8806, klue-bert: 0.8444, koelectra-v3: 0.8557)
+- **2026-02-02**: 메타러너 학습 완료 (F1: 0.8830 on valid)
+- **2026-02-02**: **Test 셋 공정 평가 완료** → Phase 2 Combined (F1: 0.9781) 최고 성능 확인
 
 ## 참고 문서
 > 아래 문서들은 필요시 `@파일경로`로 로드하세요
