@@ -1,23 +1,63 @@
-# ML Service - 한국어 독성 텍스트 분류기
+# EvoGuard ML Service
 
-한국어 독성/혐오 표현 탐지를 위한 ML 서비스입니다.
+> **한국어 혐오표현 탐지를 위한 공격-방어 공진화(Co-Evolution) 시스템**
 
-## 주요 기능
+---
 
-- 한국어 독성 텍스트 분류 (욕설, 혐오 표현, 차별 발언 등)
-- 난독화된 텍스트 탐지 (ㅅㅂ, 씌발, 특수문자 조합 등)
-- 맥락 의존적 혐오 표현 탐지 (지역 비하, 성차별 등)
-- 앙상블 모델을 통한 높은 정확도
+## 프로젝트 개요
 
-## 성능
+EvoGuard ML Service는 적대적 공격 시뮬레이션을 통해 한국어 혐오표현 탐지 모델의 강건성을 지속적으로 향상시키는 머신러닝 파이프라인입니다.
 
-| Model | F1 Score | 설명 |
-|-------|----------|------|
-| **앙상블 (권장)** | **0.9594** | Phase2 + Phase4 결합 |
-| Phase 2 | 0.9597 | 통합 데이터 학습 |
-| Phase 4 | 0.9580 | 증강 데이터 학습 |
+### 핵심 성과
 
-자세한 성능 비교는 [models/TRAINING_RESULTS.md](models/TRAINING_RESULTS.md) 참조.
+| 지표 | 값 | 비고 |
+|------|-----|------|
+| **F1 Score** | **0.9621** | 표준 테스트셋 기준 |
+| **정확도** | 96.25% | 6,207 샘플 평가 |
+| **False Positive** | 182 | 오탐률 2.9% |
+| **False Negative** | 51 | 미탐률 1.2% |
+
+---
+
+## 시스템 아키텍처
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    EvoGuard ML Pipeline                      │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌─────────────┐     공진화      ┌─────────────┐            │
+│  │   Attacker  │ ◄────────────► │  Defender   │            │
+│  │  (공격자)    │    진화/학습    │  (방어자)    │            │
+│  └─────────────┘                └─────────────┘            │
+│         │                              │                    │
+│         ▼                              ▼                    │
+│  ┌─────────────┐              ┌─────────────┐              │
+│  │ 난독화 공격  │              │ HNM 학습    │              │
+│  │ 전략 생성   │              │ (어려운샘플)  │              │
+│  └─────────────┘              └─────────────┘              │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 공진화 메커니즘
+
+1. **Attacker (공격자)**: 모델을 우회하는 난독화 공격 생성
+   - 한글 자모 분리
+   - 특수문자 삽입
+   - 유니코드 변형, 신조어 생성
+
+2. **Defender (방어자)**: 공격을 방어하도록 모델 재학습
+   - Hard Negative Mining (어려운 샘플 집중 학습)
+   - FN 가중치 2.0 (미탐 최소화)
+   - FP 가중치 1.5 (오탐 감소)
+
+3. **균형 공진화**: 양측이 함께 진화하며 성능 향상
+   - Evasion > 8%: 방어자 재학습
+   - Evasion < 5%: 공격자 진화
+   - 5~8%: 균형 구간
+
+---
 
 ## 빠른 시작
 
@@ -27,155 +67,92 @@
 cd ml-service
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -e .
 ```
 
-### 사용법
+### 추론 (Production)
 
 ```python
-from ml_service.inference.ensemble_classifier import create_ensemble
+from ml_service.inference.production_classifier import ProductionClassifier
 
-# 분류기 로드
-classifier = create_ensemble()
-
-# 단일 텍스트 분류
-result = classifier.predict("분류할 텍스트")
-print(result)
-# {'label': 0, 'label_text': 'clean', 'confidence': 0.98, 'toxic_prob': 0.02}
-
-# 독성 여부만 확인
-is_toxic = classifier.is_toxic("씨발")  # True
-
-# 점수만 확인
-score = classifier.get_toxicity_score("텍스트")  # 0.0 ~ 1.0
-
-# 배치 처리
-results = classifier.predict_batch(["텍스트1", "텍스트2", ...])
+classifier = ProductionClassifier()
+result = classifier.predict("분석할 텍스트")
+# {'label': 0, 'confidence': 0.99, 'toxic': False}
 ```
 
-### CLI 사용
+### 공진화 학습
 
 ```bash
-# 단일 텍스트
-python src/ml_service/inference/ensemble_classifier.py "분류할 텍스트"
-
-# 파일에서 읽기 (-v: 상세 출력)
-python src/ml_service/inference/ensemble_classifier.py -f input.txt -v
-
-# 임계값 조정
-python src/ml_service/inference/ensemble_classifier.py -t 0.6 "텍스트"
+python scripts/run_balanced_coevolution.py --max-cycles 100
 ```
+
+---
+
+## 모델 정보
+
+### 프로덕션 모델
+
+| 항목 | 값 |
+|------|-----|
+| **모델명** | Coevolution-Latest (v20260204) |
+| **베이스 모델** | beomi/KcELECTRA-base-v2022 |
+| **학습 방법** | 균형 공진화 100 사이클 |
+| **저장 위치** | models/production/ |
+
+### 성능 비교
+
+| 모델 | F1 | FP | FN | 비고 |
+|------|-----|-----|-----|------|
+| **Coevolution-Latest** | **0.9621** | 182 | 51 | 프로덕션 |
+| KcELECTRA (Baseline) | 0.8752 | 307 | 475 | 베이스라인 |
+| PMF Meta-Learner | 0.8793 | 367 | 383 | 3모델 앙상블 |
+
+---
+
+## 데이터셋
+
+### 표준 데이터셋: korean_standard_v1
+
+| 분할 | 샘플 수 |
+|------|---------|
+| Train | 38,911 |
+| Valid | 5,796 |
+| Test | 6,207 |
+
+---
 
 ## 프로젝트 구조
 
 ```
 ml-service/
 ├── src/ml_service/
-│   ├── inference/
-│   │   └── ensemble_classifier.py  # 앙상블 추론 모듈 (권장)
-│   └── training/
-│       └── trainer.py
-├── scripts/
-│   ├── run_training.sh             # 학습 실행 스크립트 (SSH 끊김 방지)
-│   ├── check_training.sh           # 학습 상태 확인
-│   ├── error_analysis.py           # 에러 분석
-│   ├── augment_data.py             # 데이터 증강
-│   ├── phase1_deobfuscation.py     # Phase 1: 난독화 해제
-│   ├── phase2_combined_data.py     # Phase 2: 통합 데이터
-│   ├── phase3_large_model.py       # Phase 3: 대형 모델
-│   └── phase4_augmented.py         # Phase 4: 증강 데이터
-├── models/
-│   ├── phase2-combined/            # Phase 2 모델
-│   ├── phase4-augmented/           # Phase 4 모델
-│   └── TRAINING_RESULTS.md         # 학습 결과 요약
-├── data/korean/
-│   ├── KOTOX/                      # KOTOX 데이터셋
-│   ├── beep_*.tsv                  # BEEP 데이터셋
-│   ├── unsmile_*.tsv               # UnSmile 데이터셋
-│   └── augmented/                  # 증강 데이터
-├── logs/                           # 학습 로그
-└── docs/experiments/               # 실험 문서
+│   ├── inference/              # 추론 모듈
+│   ├── attacker/               # 공격자 모듈
+│   └── training/               # 학습 모듈
+├── scripts/                    # 실행 스크립트
+├── models/                     # 모델 저장소
+├── data/korean/                # 데이터셋
+└── docs/                       # 문서
 ```
 
-## 모델 설명
+---
 
-### Phase 2 - Combined (단일 모델 최고 성능)
-- 기반 모델: `beomi/KcELECTRA-base`
-- 학습 데이터: KOTOX + BEEP + UnSmile + 욕설 데이터 (48,199건)
-- F1: 0.9597
+## 완료된 작업
 
-### Phase 4 - Augmented (독성 탐지 강화)
-- 기반 모델: Phase 2
-- 추가 데이터: 난독화 패턴 + 맥락 의존적 표현 (2,070건)
-- F1: 0.9580
-- 특징: False Negative 감소 (놓치는 독성 줄임)
+- [x] KcELECTRA 베이스 모델 학습
+- [x] 공진화 시스템 구현
+- [x] Hard Negative Mining 적용
+- [x] PMF 앙상블 구현
+- [x] 프로덕션 배포 시스템
+- [x] 표준 데이터셋 구축
 
-### 앙상블 (권장)
-- 구성: Phase2 (60%) + Phase4 (40%) 가중 평균
-- F1: 0.9594
-- 특징: 오탐과 미탐의 균형이 가장 좋음
+---
 
-## 학습하기
+## 참고 문서
 
-### 학습 실행 (SSH 끊김 방지)
+- [학습 보고서](docs/COEVOLUTION_TRAINING_REPORT_20260204.md)
+- [학습 표준 설정](TRAINING_STANDARDS.md)
 
-```bash
-# tmux에서 실행 (권장)
-./scripts/run_training.sh phase4_augmented.py --epochs 10
+---
 
-# 백그라운드 실행
-./scripts/run_training.sh -b phase4_augmented.py --epochs 10
-
-# 학습 상태 확인
-./scripts/check_training.sh
-```
-
-### 개별 Phase 학습
-
-```bash
-# Phase 1: 난독화 해제 학습
-python scripts/phase1_deobfuscation.py --epochs 15
-
-# Phase 2: 통합 데이터 학습
-python scripts/phase2_combined_data.py --epochs 10
-
-# Phase 3: 대형 모델 학습
-python scripts/phase3_large_model.py --epochs 10
-
-# Phase 4: 증강 데이터 학습
-python scripts/phase4_augmented.py --epochs 10
-```
-
-### 에러 분석
-
-```bash
-python scripts/error_analysis.py
-# 결과: logs/error_analysis.json
-```
-
-### 데이터 증강
-
-```bash
-python scripts/augment_data.py
-# 결과: data/korean/augmented/augmented_toxic.tsv
-```
-
-## 데이터셋
-
-| 데이터셋 | 크기 | 설명 |
-|----------|------|------|
-| KOTOX | ~11,000 | 난독화 포함 독성 데이터 |
-| BEEP | ~8,000 | 한국어 혐오 표현 |
-| UnSmile | ~15,000 | 다중 레이블 혐오 표현 |
-| 욕설 데이터 | ~5,800 | 한국어 욕설 |
-| 증강 데이터 | ~2,000 | 패턴 기반 생성 |
-
-## 문서
-
-- [학습 결과 요약](models/TRAINING_RESULTS.md)
-- [실험 로그](docs/experiments/)
-- [프로젝트 전체 문서](../.claude/docs/)
-
-## 라이선스
-
-Internal Use Only
+*Last Updated: 2026-02-04*
