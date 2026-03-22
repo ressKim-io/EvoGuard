@@ -321,6 +321,100 @@ class LabelSmoothingLoss(nn.Module):
         return loss
 
 
+class DynamicFocalLoss(nn.Module):
+    """Dynamic Focal Loss with batch-adaptive alpha.
+
+    Automatically adjusts alpha based on per-batch class distribution,
+    reducing the need for manual tuning of class weights.
+
+    Args:
+        gamma: Focusing parameter (same as FocalLoss).
+        base_alpha: Base alpha for positive class when classes are balanced.
+        min_alpha: Minimum alpha value (prevents extreme weighting).
+        max_alpha: Maximum alpha value.
+        reduction: 'mean', 'sum', or 'none'
+
+    Example:
+        >>> criterion = DynamicFocalLoss(gamma=2.0)
+        >>> loss = criterion(logits, targets)
+    """
+
+    def __init__(
+        self,
+        gamma: float = 2.0,
+        base_alpha: float = 0.25,
+        min_alpha: float = 0.1,
+        max_alpha: float = 0.9,
+        reduction: str = "mean",
+    ) -> None:
+        _check_torch()
+        super().__init__()
+        self.gamma = gamma
+        self.base_alpha = base_alpha
+        self.min_alpha = min_alpha
+        self.max_alpha = max_alpha
+        self.reduction = reduction
+
+    def forward(
+        self,
+        inputs: torch.Tensor,
+        targets: torch.Tensor,
+    ) -> torch.Tensor:
+        """Compute dynamic focal loss with batch-adaptive alpha.
+
+        Args:
+            inputs: Predicted logits of shape (N, C)
+            targets: Ground truth labels of shape (N,)
+
+        Returns:
+            Dynamic focal loss value
+        """
+        # Compute per-batch class ratio for dynamic alpha
+        num_positive = (targets == 1).sum().float()
+        num_negative = (targets == 0).sum().float()
+        total = num_positive + num_negative
+
+        if total > 0 and num_positive > 0 and num_negative > 0:
+            # Alpha proportional to inverse frequency of positive class
+            positive_ratio = num_positive / total
+            alpha = torch.clamp(
+                torch.tensor(1.0 - positive_ratio, device=inputs.device),
+                min=self.min_alpha,
+                max=self.max_alpha,
+            )
+        else:
+            alpha = torch.tensor(self.base_alpha, device=inputs.device)
+
+        # Compute softmax probabilities
+        p = F.softmax(inputs, dim=-1)
+
+        # Get probability of correct class
+        ce_loss = F.cross_entropy(inputs, targets, reduction="none")
+        p_t = p.gather(1, targets.unsqueeze(1)).squeeze(1)
+
+        # Compute focal weight
+        focal_weight = (1 - p_t) ** self.gamma
+
+        # Apply focal weight
+        focal_loss = focal_weight * ce_loss
+
+        # Apply dynamic alpha weighting
+        alpha_t = torch.where(
+            targets == 1,
+            alpha,
+            1.0 - alpha,
+        )
+        focal_loss = alpha_t * focal_loss
+
+        # Apply reduction
+        if self.reduction == "mean":
+            return focal_loss.mean()
+        elif self.reduction == "sum":
+            return focal_loss.sum()
+        else:
+            return focal_loss
+
+
 def get_loss_function(
     loss_type: str = "robust",
     **kwargs,
@@ -339,6 +433,7 @@ def get_loss_function(
     """
     loss_functions = {
         "focal": FocalLoss,
+        "dynamic_focal": DynamicFocalLoss,
         "trades": TRADESLoss,
         "robust": RobustLoss,
         "label_smoothing": LabelSmoothingLoss,

@@ -111,6 +111,12 @@ PMF_MODELS = [
         output_dir="models/pmf/koelectra-v3",
         description="KoELECTRA v3 discriminator",
     ),
+    PMFModelConfig(
+        name="mdeberta-v3",
+        pretrained="microsoft/mdeberta-v3-base",
+        output_dir="models/pmf/mdeberta-v3",
+        description="Multilingual DeBERTa v3 (architecture diversity)",
+    ),
 ]
 
 

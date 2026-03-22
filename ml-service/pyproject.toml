@@ -51,6 +51,8 @@ training = [
     "scikit-learn>=1.4.0",
     "tqdm>=4.66.0",
     "xgboost>=2.0.0",  # PMF 앙상블 메타러너
+    "cleanlab>=2.6.0",  # 라벨 오류 탐지
+    "anthropic>=0.25.0",  # LLM 기반 공격 생성
 ]
 
 [build-system]
