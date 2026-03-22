@@ -199,3 +199,21 @@ temp/
 coverage.out
 mlflow.db
 ml-service/mlflow.db
+
+# ========================================
+# Large data files & datasets (raw)
+# ========================================
+147.*/
+TL_2*.zip
+TS_2*.zip
+VL_2*.zip
+VS_2*.zip
+ml-service/data/korean/KOLD/
+ml-service/data/korean/KPHC/
+ml-service/data/korean/KoMultiText/
+ml-service/data/korean/aihub_harmful/
+ml-service/data/korean/ethics_verification/
+ml-service/data/korean/label_verification/
+
+# Kubeconfig
+*kubeconfig*
