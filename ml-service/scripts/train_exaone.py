@@ -43,7 +43,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # EXAONE model
-EXAONE_MODEL = "LGAI-EXAONE/EXAONE-3.5-2.4B-Instruct"
+EXAONE_MODEL = "LGAI-EXAONE/EXAONE-4.0-1.2B"
 OUTPUT_DIR = "models/pmf/exaone"
 
 
