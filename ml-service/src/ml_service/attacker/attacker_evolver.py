@@ -253,7 +253,23 @@ class AttackerEvolver:
                 if added > 0:
                     changes.append(f"Discovered {added} slang from evasions")
 
-        # 4. 탐색 가중치 증가
+        # 4. LLM 기반 공격 변형 생성
+        if successful_evasions and self._use_llm_attacker():
+            try:
+                from ml_service.attacker.llm_attacker import LLMAttacker
+
+                llm = LLMAttacker()
+                # 성공한 우회 중 일부를 LLM으로 추가 변형
+                sample_texts = [e["original_text"] for e in successful_evasions[:3]]
+                for text in sample_texts:
+                    variants = llm.generate_variants(text, n=3)
+                    if variants:
+                        new_slang += len(variants)
+                        changes.append(f"LLM generated {len(variants)} variants for '{text[:20]}...'")
+            except (ImportError, ValueError) as e:
+                logger.debug(f"[Evolver] LLM attacker not available: {e}")
+
+        # 5. 탐색 가중치 증가
         if self._learning_attacker:
             old_weight = self._learning_attacker._selector.exploration_weight
             new_weight = min(5.0, old_weight + self.config.aggressive_exploration_boost)
@@ -316,6 +332,11 @@ class AttackerEvolver:
             "new_strategies": new_strategies,
             "new_slang": new_slang,
         }
+
+    def _use_llm_attacker(self) -> bool:
+        """Check if LLM attacker is available (API key set)."""
+        import os
+        return bool(os.environ.get("ANTHROPIC_API_KEY"))
 
     def _maintenance_evolve(self) -> dict[str, Any]:
         """Maintenance evolution (evasion 5-8%).

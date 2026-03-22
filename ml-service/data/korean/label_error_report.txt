@@ -1,0 +1,92 @@
+======================================================================
+LABEL ERROR DETECTION REPORT
+======================================================================
+Total samples: 38911
+Total issues found: 30
+  FN errors (labeled clean → likely toxic): 4
+  FP errors (labeled toxic → likely clean): 26
+  Error rate: 0.08%
+
+----------------------------------------------------------------------
+TOP 20 MOST SUSPICIOUS SAMPLES
+----------------------------------------------------------------------
+
+[#30616] Quality: 0.088, Confidence: 0.912
+  Given: toxic → Predicted: clean
+  Text: "박한별씨 마음이 너무 힘들겠네요. 남편이 저런 사람이라니....,"
+
+[#2012] Quality: 0.088, Confidence: 0.912
+  Given: toxic → Predicted: clean
+  Text: "미친 교황이로다"
+
+[#5918] Quality: 0.088, Confidence: 0.912
+  Given: toxic → Predicted: clean
+  Text: "와 씹고수 ㅋㅋㅋ"
+
+[#30678] Quality: 0.090, Confidence: 0.910
+  Given: toxic → Predicted: clean
+  Text: "그렇다고 공부 못하는 년은 용접이나 해라 라고 말 할 정도로 비하받아야 할 이유도 없지"
+
+[#20502] Quality: 0.093, Confidence: 0.907
+  Given: toxic → Predicted: clean
+  Text: "역대급 철판이다"
+
+[#20673] Quality: 0.094, Confidence: 0.906
+  Given: toxic → Predicted: clean
+  Text: "기술 필요해 해저용접 같은거는 특히 아무나 하는게 아니여 문제는 그런 특수용접공들이 아닌 잡용접공들이 자신을 고급기술자로 알기 때문이지"
+
+[#37050] Quality: 0.097, Confidence: 0.903
+  Given: toxic → Predicted: clean
+  Text: "실제로 김대중이라고 했는데 김재중이라고 한거라고 구라친거라는 생각은 안해봣노 ?"
+
+[#31460] Quality: 0.098, Confidence: 0.902
+  Given: toxic → Predicted: clean
+  Text: "7등급 이하는 ㄹㅇ 자기손을 용접하지 절대 일 못함."
+
+[#6295] Quality: 0.107, Confidence: 0.893
+  Given: clean → Predicted: toxic
+  Text: "양준일은 나이도 차고 경력도 없으니 그럴만 하지."
+
+[#24713] Quality: 0.112, Confidence: 0.888
+  Given: toxic → Predicted: clean
+  Text: "미친ㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋ"
+
+[#14499] Quality: 0.114, Confidence: 0.886
+  Given: clean → Predicted: toxic
+  Text: "그게다 남부유럽 대표 감성충들인 이탈리아, 스페인애들이 이민 많이 가서 그래. 신대륙에 산업시설은 커녕 허허벌판 밖에 없는데 가서 노조질부터하고..."
+
+[#34591] Quality: 0.115, Confidence: 0.885
+  Given: toxic → Predicted: clean
+  Text: "잘생긴 형아들이 내입에 싸주면 흥분되고좋은데.."
+
+[#11941] Quality: 0.118, Confidence: 0.882
+  Given: clean → Predicted: toxic
+  Text: "스티브유 그냥 지들 나라에서 살기를.."
+
+[#27352] Quality: 0.123, Confidence: 0.877
+  Given: toxic → Predicted: clean
+  Text: "이건 볼때마다 개웃김ㅋㅋㅋㅋ"
+
+[#32421] Quality: 0.131, Confidence: 0.869
+  Given: clean → Predicted: toxic
+  Text: "털이 저래 존나 많은데 추위 많이 타기는 따뜻한거 좋아하고 존나 게을러서 저럼."
+
+[#24125] Quality: 0.134, Confidence: 0.866
+  Given: toxic → Predicted: clean
+  Text: "문과에서 허가 안해주면 못만들어~ 이과는 문과 아래야 알겠어?? 왜 문과 욕해??"
+
+[#32244] Quality: 0.151, Confidence: 0.849
+  Given: toxic → Predicted: clean
+  Text: "김하경 쯥...."
+
+[#37467] Quality: 0.168, Confidence: 0.832
+  Given: toxic → Predicted: clean
+  Text: "슬슬 정부 씹고, 대구가 잘해서 극복했다는 니우스 뿌리가 ㅎㅎㅎ"
+
+[#12414] Quality: 0.171, Confidence: 0.829
+  Given: toxic → Predicted: clean
+  Text: "니말대로 천한직업이야말로"
+
+[#34759] Quality: 0.172, Confidence: 0.828
+  Given: toxic → Predicted: clean
+  Text: "ㅈㅈ위쪽 뼈에닿을때까지 눌러서 재는거라던데"

@@ -52,7 +52,7 @@ class ModelConfig:
     description: str
 
 
-# PMF 앙상블에 사용할 3개 모델 정의
+# PMF 앙상블에 사용할 4개 모델 정의
 PMF_MODELS = [
     ModelConfig(
         name="kcelectra",
@@ -71,6 +71,12 @@ PMF_MODELS = [
         pretrained="monologg/koelectra-base-v3-discriminator",
         output_dir="models/pmf/koelectra-v3",
         description="KoELECTRA v3 discriminator"
+    ),
+    ModelConfig(
+        name="mdeberta-v3",
+        pretrained="microsoft/mdeberta-v3-base",
+        output_dir="models/pmf/mdeberta-v3",
+        description="Multilingual DeBERTa v3 (architecture diversity)"
     ),
 ]
 
@@ -338,7 +344,8 @@ def evaluate_trained_model(config: ModelConfig, valid_df: pd.DataFrame, device: 
 
 def main():
     parser = argparse.ArgumentParser(description="Train multiple models for PMF ensemble")
-    parser.add_argument("--models", nargs="+", choices=["kcelectra", "klue-bert", "koelectra-v3", "all"],
+    parser.add_argument("--models", nargs="+",
+                        choices=["kcelectra", "klue-bert", "koelectra-v3", "mdeberta-v3", "all"],
                         default=["all"], help="Models to train")
     parser.add_argument("--epochs", type=int, default=STANDARD_CONFIG.epochs, help="Number of epochs")
     parser.add_argument("--batch_size", type=int, default=STANDARD_CONFIG.batch_size, help="Batch size")

@@ -59,6 +59,8 @@ from ml_service.pipeline.hard_negative_miner import (
     HardNegativeMiner,
     HardNegativeMinerConfig,
 )
+from ml_service.training.losses import FocalLoss
+from ml_service.training.r3f_loss import R3FLoss
 
 logging.basicConfig(
     level=logging.INFO,
@@ -95,12 +97,21 @@ class BalancedConfig:
     learning_rate: float = 2e-5
     use_amp: bool = True
 
+    # FocalLoss 설정
+    focal_gamma: float = 2.0
+    focal_alpha: float = 0.25
+
+    # R3F 정규화 설정
+    use_r3f: bool = False
+    r3f_lambda: float = 1.0
+    r3f_noise_std: float = 1e-5
+
     # 공격 설정
     attack_batch_size: int = 150
     attack_variants: int = 15
 
     # 데이터
-    original_data_path: Path = field(default_factory=lambda: Path("data/korean/korean_hate_speech_full.csv"))
+    original_data_path: Path = field(default_factory=lambda: Path("data/korean/korean_standard_v4_train.csv"))
     original_sample_size: int = 2000
 
     # 모델
@@ -237,6 +248,17 @@ class BalancedCoevolution:
         self._tokenizer = None
         self._classifier = None
         self._scaler = GradScaler() if config.use_amp else None
+
+        # FocalLoss + R3F
+        self._focal_loss = FocalLoss(
+            gamma=config.focal_gamma,
+            alpha=config.focal_alpha,
+            reduction="none",  # per-sample for weighting
+        )
+        self._r3f = R3FLoss(
+            noise_std=config.r3f_noise_std,
+            r3f_lambda=config.r3f_lambda,
+        ) if config.use_r3f else None
 
         # 컴포넌트
         self._learning_attacker: LearningAttacker | None = None
@@ -563,24 +585,47 @@ class BalancedCoevolution:
 
                 if self.config.use_amp:
                     with autocast():
-                        outputs = self._model(
-                            input_ids=input_ids,
-                            attention_mask=attention_mask,
-                            labels=labels,
-                        )
-                        # 가중치 적용된 손실
-                        loss = (outputs.loss * weights).mean()
+                        if self._r3f is not None:
+                            # R3F: clean + noisy forward pass with FocalLoss
+                            focal_mean = FocalLoss(
+                                gamma=self.config.focal_gamma,
+                                alpha=self.config.focal_alpha,
+                                reduction="mean",
+                            )
+                            loss, _ = self._r3f(
+                                self._model, input_ids, attention_mask,
+                                labels, focal_mean,
+                            )
+                        else:
+                            # FocalLoss with per-sample weighting
+                            outputs = self._model(
+                                input_ids=input_ids,
+                                attention_mask=attention_mask,
+                            )
+                            per_sample_loss = self._focal_loss(outputs.logits, labels)
+                            loss = (per_sample_loss * weights).mean()
 
                     self._scaler.scale(loss).backward()
                     self._scaler.step(optimizer)
                     self._scaler.update()
                 else:
-                    outputs = self._model(
-                        input_ids=input_ids,
-                        attention_mask=attention_mask,
-                        labels=labels,
-                    )
-                    loss = (outputs.loss * weights).mean()
+                    if self._r3f is not None:
+                        focal_mean = FocalLoss(
+                            gamma=self.config.focal_gamma,
+                            alpha=self.config.focal_alpha,
+                            reduction="mean",
+                        )
+                        loss, _ = self._r3f(
+                            self._model, input_ids, attention_mask,
+                            labels, focal_mean,
+                        )
+                    else:
+                        outputs = self._model(
+                            input_ids=input_ids,
+                            attention_mask=attention_mask,
+                        )
+                        per_sample_loss = self._focal_loss(outputs.logits, labels)
+                        loss = (per_sample_loss * weights).mean()
                     loss.backward()
                     optimizer.step()
 
@@ -845,6 +890,10 @@ async def main():
     parser.add_argument("--max-cycles", type=int, help="Max cycles (default: unlimited)")
     parser.add_argument("--target-evasion", type=float, help="Stop when avg evasion <= target")
     parser.add_argument("--no-amp", action="store_true", help="Disable mixed precision")
+    parser.add_argument("--r3f", action="store_true", help="Enable R3F regularization")
+    parser.add_argument("--r3f-lambda", type=float, default=1.0, help="R3F lambda weight")
+    parser.add_argument("--focal-gamma", type=float, default=2.0, help="Focal loss gamma")
+    parser.add_argument("--focal-alpha", type=float, default=0.25, help="Focal loss alpha")
     parser.add_argument("--verbose", action="store_true", help="Verbose output")
 
     args = parser.parse_args()
@@ -854,6 +903,10 @@ async def main():
 
     config = BalancedConfig(
         use_amp=not args.no_amp,
+        use_r3f=args.r3f,
+        r3f_lambda=args.r3f_lambda,
+        focal_gamma=args.focal_gamma,
+        focal_alpha=args.focal_alpha,
     )
 
     coevolution = BalancedCoevolution(config)

@@ -371,6 +371,7 @@ def main():
         ("kcelectra", model_dir / "kcelectra" / "best_model"),
         ("klue-bert", model_dir / "klue-bert" / "best_model"),
         ("koelectra-v3", model_dir / "koelectra-v3" / "best_model"),
+        ("mdeberta-v3", model_dir / "mdeberta-v3" / "best_model"),
     ]
 
     # Check if models exist

@@ -49,9 +49,10 @@ class PMFEnsemble:
         "models/pmf/kcelectra/best_model",
         "models/pmf/klue-bert/best_model",
         "models/pmf/koelectra-v3/best_model",
+        "models/pmf/mdeberta-v3/best_model",
     ]
 
-    DEFAULT_WEIGHTS = [0.4, 0.3, 0.3]  # KcELECTRA gets higher weight
+    DEFAULT_WEIGHTS = [0.35, 0.20, 0.20, 0.25]  # Balanced with mDeBERTa
 
     def __init__(
         self,
@@ -112,6 +113,22 @@ class PMFEnsemble:
     def _load_models(self):
         """Load all transformer models."""
         logger.info(f"Loading {len(self.model_paths)} models on {self.device}...")
+
+        # Filter to available models only
+        available_paths = []
+        for path in self.model_paths:
+            if Path(path).exists():
+                available_paths.append(path)
+            else:
+                logger.warning(f"Model not found, skipping: {path}")
+
+        if not available_paths:
+            raise FileNotFoundError("No models found. Train models first.")
+
+        # Adjust weights to match available models
+        if len(available_paths) < len(self.model_paths):
+            self.weights = [1.0 / len(available_paths)] * len(available_paths)
+            self.model_paths = available_paths
 
         for path in self.model_paths:
             path = Path(path)
@@ -475,12 +492,18 @@ def create_pmf_ensemble(
         str(model_dir / "pmf" / "kcelectra" / "best_model"),
         str(model_dir / "pmf" / "klue-bert" / "best_model"),
         str(model_dir / "pmf" / "koelectra-v3" / "best_model"),
+        str(model_dir / "pmf" / "mdeberta-v3" / "best_model"),
     ]
 
     meta_learner_path = str(model_dir / "pmf" / "meta_learner.pkl")
 
+    # Filter to actually existing models
+    existing_paths = [p for p in model_paths if Path(p).exists()]
+    if not existing_paths:
+        raise ValueError("No PMF models found. Train models first.")
+
     return PMFEnsemble(
-        model_paths=model_paths,
+        model_paths=existing_paths,
         meta_learner_path=meta_learner_path,
         strategy=strategy,
         weights=weights,
