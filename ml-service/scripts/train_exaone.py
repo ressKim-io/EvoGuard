@@ -78,12 +78,14 @@ def train_exaone(
     train_df: pd.DataFrame,
     valid_df: pd.DataFrame,
     epochs: int = 5,
-    batch_size: int = 8,
-    lr: float = 1e-4,
+    batch_size: int = 2,
+    lr: float = 2e-5,
     lora_r: int = 16,
     lora_alpha: int = 32,
     lora_dropout: float = 0.1,
     use_4bit: bool = True,
+    grad_accum_steps: int = 4,
+    max_length: int = 128,
 ) -> dict:
     """Train EXAONE with QLoRA.
 
@@ -91,12 +93,14 @@ def train_exaone(
         train_df: Training data.
         valid_df: Validation data.
         epochs: Number of epochs.
-        batch_size: Batch size.
+        batch_size: Batch size (micro-batch).
         lr: Learning rate.
         lora_r: LoRA rank.
         lora_alpha: LoRA alpha scaling.
         lora_dropout: LoRA dropout.
         use_4bit: Use 4-bit quantization (QLoRA).
+        grad_accum_steps: Gradient accumulation steps.
+        max_length: Max sequence length.
 
     Returns:
         Training results dict.
@@ -114,7 +118,7 @@ def train_exaone(
             bnb_config = BitsAndBytesConfig(
                 load_in_4bit=True,
                 bnb_4bit_quant_type="nf4",
-                bnb_4bit_compute_dtype=torch.float16,
+                bnb_4bit_compute_dtype=torch.bfloat16,
                 bnb_4bit_use_double_quant=True,
             )
             logger.info("Using 4-bit QLoRA quantization")
@@ -127,6 +131,7 @@ def train_exaone(
 
     logger.info(f"Loading EXAONE model: {EXAONE_MODEL}")
     tokenizer = AutoTokenizer.from_pretrained(EXAONE_MODEL, trust_remote_code=True)
+    tokenizer.padding_side = "left"
 
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
@@ -153,33 +158,43 @@ def train_exaone(
         lora_alpha=lora_alpha,
         lora_dropout=lora_dropout,
         target_modules=["q_proj", "v_proj", "k_proj", "o_proj"],
+        modules_to_save=["score"],
     )
 
     model = get_peft_model(model, lora_config)
     model.print_trainable_parameters()
 
+    # Enable gradient checkpointing for memory savings
+    model.gradient_checkpointing_enable(
+        gradient_checkpointing_kwargs={"use_reentrant": False}
+    )
+    model.enable_input_require_grads()
+
     if not use_4bit:
         model.to(device)
+
+    logger.info(f"Batch size: {batch_size}, Grad accum: {grad_accum_steps}, "
+                f"Effective batch: {batch_size * grad_accum_steps}, Max length: {max_length}")
 
     # Datasets
     train_dataset = ToxicDataset(
         train_df["text"].tolist(),
         train_df["label"].tolist(),
         tokenizer,
+        max_length=max_length,
     )
     valid_dataset = ToxicDataset(
         valid_df["text"].tolist(),
         valid_df["label"].tolist(),
         tokenizer,
+        max_length=max_length,
     )
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     valid_loader = DataLoader(valid_dataset, batch_size=batch_size)
 
-    # Training
-    from ml_service.training.losses import FocalLoss
-
-    criterion = FocalLoss(gamma=2.0, alpha=0.25)
+    # Training - use CrossEntropyLoss for stability with QLoRA
+    criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
 
     output_dir = Path(OUTPUT_DIR)
@@ -191,20 +206,23 @@ def train_exaone(
     for epoch in range(epochs):
         model.train()
         total_loss = 0
+        optimizer.zero_grad()
 
-        for batch in tqdm(train_loader, desc=f"Epoch {epoch + 1}/{epochs}"):
+        for step, batch in enumerate(tqdm(train_loader, desc=f"Epoch {epoch + 1}/{epochs}")):
             input_ids = batch["input_ids"].to(device)
             attention_mask = batch["attention_mask"].to(device)
             labels = batch["labels"].to(device)
 
-            optimizer.zero_grad()
             outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-            loss = criterion(outputs.logits, labels)
+            loss = criterion(outputs.logits, labels) / grad_accum_steps
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            optimizer.step()
 
-            total_loss += loss.item()
+            total_loss += loss.item() * grad_accum_steps
+
+            if (step + 1) % grad_accum_steps == 0 or (step + 1) == len(train_loader):
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                optimizer.step()
+                optimizer.zero_grad()
 
         avg_loss = total_loss / len(train_loader)
 
@@ -261,10 +279,12 @@ def train_exaone(
 def main():
     parser = argparse.ArgumentParser(description="Train EXAONE with QLoRA")
     parser.add_argument("--epochs", type=int, default=5)
-    parser.add_argument("--batch-size", type=int, default=8)
-    parser.add_argument("--lr", type=float, default=1e-4)
+    parser.add_argument("--batch-size", type=int, default=2)
+    parser.add_argument("--lr", type=float, default=2e-5)
     parser.add_argument("--lora-r", type=int, default=16)
     parser.add_argument("--lora-alpha", type=int, default=32)
+    parser.add_argument("--grad-accum", type=int, default=4, help="Gradient accumulation steps")
+    parser.add_argument("--max-length", type=int, default=128, help="Max sequence length")
     parser.add_argument("--no-4bit", action="store_true", help="Disable 4-bit quantization")
     parser.add_argument("--data-dir", type=str, default=None)
     parser.add_argument("--dataset-version", type=str, default="korean_standard_v1")
@@ -298,6 +318,8 @@ def main():
         lora_r=args.lora_r,
         lora_alpha=args.lora_alpha,
         use_4bit=not args.no_4bit,
+        grad_accum_steps=args.grad_accum,
+        max_length=args.max_length,
     )
 
 
