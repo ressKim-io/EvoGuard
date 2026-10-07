@@ -14,7 +14,7 @@ services:
   # PostgreSQL - Main Database
   # ===========================================================================
   postgres:
-    image: bitnami/postgresql:16
+    image: soldevelo/postgresql:16
     container_name: evoguard-postgres
     environment:
       - POSTGRESQL_USERNAME=${DB_USER:-postgres}
@@ -126,7 +126,7 @@ services:
   # MinIO - S3-Compatible Object Storage (for MLflow artifacts)
   # ===========================================================================
   minio:
-    image: bitnami/minio:2024
+    image: soldevelo/minio:2024.12
     container_name: evoguard-minio
     environment:
       - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
